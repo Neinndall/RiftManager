@@ -65,8 +65,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: "PBE_AssetsDownloader Version"
-      description: "e.g., v2.1.0.0, you can find it in the Help -> About window"
+      label: "RiftManager Version"
+      description: "e.g., v2.1.0.0, you can find it in the releases version in GitHub"
       placeholder: "vX.Y.Z.W"
     validations:
       required: true
@@ -88,18 +88,7 @@ body:
       placeholder: "x64"
     validations:
       required: true
-      
-  - type: dropdown
-    id: installation-type
-    attributes:
-      label: "Installation Type"
-      description: "Is this a clean installation or an update?"
-      options:
-        - "Clean Installation"
-        - "Update"
-    validations:
-      required: true
-      
+            
   - type: textarea
     id: log-files
     attributes:
