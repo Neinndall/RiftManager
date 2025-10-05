@@ -5,6 +5,7 @@
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/Styles/ModernListView.xaml"/>
                 <ResourceDictionary Source="/Styles/CommonStyles.xaml"/>
                 <ResourceDictionary Source="/Styles/CustomScrollbarStyles.xaml"/>
                 <ResourceDictionary Source="/Styles/Colors.xaml"/>

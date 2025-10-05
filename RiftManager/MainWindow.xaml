@@ -25,20 +25,33 @@
             </Grid.ColumnDefinitions>
 
             <!-- Columna Izquierda: Lista de Eventos -->
-            <ListView Name="EventsListView" Grid.Column="0" Background="Transparent" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" SelectionChanged="EventsListView_SelectionChanged">
-                <ListView.View>
-                    <GridView>
-                        <GridViewColumn Header="List of Events" Width="350">
-                            <GridViewColumn.CellTemplate>
-                                <DataTemplate>
-                                    <TextBlock VerticalAlignment="Center" Foreground="{StaticResource TextPrimary}" TextWrapping="Wrap"
-                                               Text="{Binding Title}"/>
-                                </DataTemplate>
-                            </GridViewColumn.CellTemplate>
-                        </GridViewColumn>
-                    </GridView>
-                </ListView.View>
-            </ListView>
+            <Border Grid.Column="0" CornerRadius="5" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" ClipToBounds="True">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Cabecera -->
+                    <Border BorderThickness="0,0,0,1" BorderBrush="{StaticResource BorderColor}" Background="{StaticResource HeaderBackground}">
+                        <TextBlock Text="List of Events" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="SemiBold" Margin="10,8"/>
+                    </Border>
+
+                    <ListView Grid.Row="1" Name="EventsListView" SelectionChanged="EventsListView_SelectionChanged" Style="{StaticResource ModernListViewInBorder}" ItemContainerStyle="{StaticResource ModernListViewItem}">
+                        <ListView.View>
+                            <GridView>
+                                <GridViewColumn Width="380">
+                                    <GridViewColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" Text="{Binding Title}"/>
+                                        </DataTemplate>
+                                    </GridViewColumn.CellTemplate>
+                                </GridViewColumn>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </Grid>
+            </Border>
 
             <!-- Columna Derecha: Detalles y Log -->
             <Grid Grid.Column="1" Margin="10,0,0,0">

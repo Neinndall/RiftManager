@@ -33,54 +33,6 @@
         </Style.Triggers>
     </Style>
 
-    <!-- Estilo para ListViewItem para el tema oscuro -->
-    <Style TargetType="ListViewItem">
-        <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Foreground" Value="White"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Padding" Value="5,8"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="ListViewItem">
-                    <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="true" Margin="10,0,0,0">
-                        <ContentPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#3d3d3d"/>
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="#3d3d3d"/>
-                            <Setter Property="Foreground" Value="White"/>
-                        </Trigger>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="#2c2c2c"/>
-                            <Setter Property="Foreground" Value="White"/>
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-    </Style>
-
-    <!-- Estilo para GridViewColumnHeader para el tema oscuro -->
-    <Style TargetType="GridViewColumnHeader">
-        <Setter Property="Background" Value="{StaticResource HeaderBackground}"/>
-        <Setter Property="Foreground" Value="White"/>
-        <Setter Property="BorderBrush" Value="{StaticResource BorderColor}"/>
-        <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Padding" Value="5" />
-        <Setter Property="FontWeight" Value="Bold"/>
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="GridViewColumnHeader">
-                    <Border BorderThickness="0,0,0,1" BorderBrush="{TemplateBinding BorderBrush}" Background="{TemplateBinding Background}">
-                        <ContentPresenter x:Name="HeaderContent" Content="{TemplateBinding Content}" RecognizesAccessKey="True" SnapsToDevicePixels="True" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="{TemplateBinding Padding}"/>
-                    </Border>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
     <!-- Template para el ToggleButton del ComboBox -->
     <ControlTemplate x:Key="ComboBoxToggleButtonTemplate" TargetType="ToggleButton">
         <Grid>
@@ -133,7 +85,8 @@
                     <Border x:Name="border"
                             Background="{TemplateBinding Background}"
                             BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}">
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="5">
                         <ScrollViewer x:Name="PART_ContentHost"
                                       Background="Transparent"
                                       Padding="{TemplateBinding Padding}"
