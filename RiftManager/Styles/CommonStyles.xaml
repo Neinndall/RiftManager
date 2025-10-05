@@ -64,9 +64,9 @@
 
     <!-- Estilo para GridViewColumnHeader para el tema oscuro -->
     <Style TargetType="GridViewColumnHeader">
-        <Setter Property="Background" Value="#2d2d2d"/>
+        <Setter Property="Background" Value="{StaticResource HeaderBackground}"/>
         <Setter Property="Foreground" Value="White"/>
-        <Setter Property="BorderBrush" Value="#444"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderColor}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Padding" Value="5" />
         <Setter Property="FontWeight" Value="Bold"/>

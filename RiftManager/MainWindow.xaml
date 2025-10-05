@@ -7,17 +7,14 @@
         xmlns:utils="clr-namespace:RiftManager.Utils"
         mc:Ignorable="d"
         Title="RiftManager" Height="720" Width="1280"
-        Background="#1e1e1e">
-    <Window.Resources>
-        
-    </Window.Resources>
+        Background="{StaticResource DarkBackground}">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Background="#2d2d2d" Height="50">
+        <Grid Grid.Row="0" Background="{StaticResource HeaderBackground}" Height="50">
             <Button Content="Riot Manifests" Style="{StaticResource ModernButton}" Click="DownloadRiotManifests_Click" HorizontalAlignment="Left" VerticalAlignment="Center" Width="120" Height="30" Margin="10,0,0,0"/>
         </Grid>
 
@@ -28,13 +25,13 @@
             </Grid.ColumnDefinitions>
 
             <!-- Columna Izquierda: Lista de Eventos -->
-            <ListView Name="EventsListView" Grid.Column="0" Background="Transparent" BorderBrush="#444" BorderThickness="1" SelectionChanged="EventsListView_SelectionChanged">
+            <ListView Name="EventsListView" Grid.Column="0" Background="Transparent" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" SelectionChanged="EventsListView_SelectionChanged">
                 <ListView.View>
                     <GridView>
                         <GridViewColumn Header="List of Events" Width="350">
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
-                                    <TextBlock VerticalAlignment="Center" Foreground="White" TextWrapping="Wrap"
+                                    <TextBlock VerticalAlignment="Center" Foreground="{StaticResource TextPrimary}" TextWrapping="Wrap"
                                                Text="{Binding Title}"/>
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>
@@ -63,7 +60,7 @@
                                     <GradientStop Color="#e51e1e1e" Offset="1"/>
                                 </LinearGradientBrush>
                             </Grid.Background>
-                            <TextBlock x:Name="EventTitleTextBlock" Text="Event Title" FontSize="24" FontWeight="Bold" Foreground="White" VerticalAlignment="Bottom" Margin="15"/>
+                            <TextBlock x:Name="EventTitleTextBlock" Text="Event Title" FontSize="24" FontWeight="Bold" Foreground="{StaticResource TextPrimary}" VerticalAlignment="Bottom" Margin="15"/>
                         </Grid>
                     </Border>
                     
@@ -80,21 +77,21 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
-                        <TextBlock Grid.Row="0" Grid.Column="0" Text="ID:" Foreground="#AAAAAA" Margin="0,0,5,0"/>
-                        <TextBlock x:Name="EventIdTextBlock" Grid.Row="0" Grid.Column="1" Text="{Binding NavigationItemId}" Foreground="White"/>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="ID:" Foreground="{StaticResource TextLabel}" Margin="0,0,5,0"/>
+                        <TextBlock x:Name="EventIdTextBlock" Grid.Row="0" Grid.Column="1" Text="{Binding NavigationItemId}" Foreground="{StaticResource TextPrimary}"/>
 
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Tipo:" Foreground="#AAAAAA" Margin="0,5,5,0"/>
-                        <TextBlock x:Name="EventTypeTextBlock" Grid.Row="1" Grid.Column="1" Text="N/A" Foreground="White" Margin="0,5,0,0"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Tipo:" Foreground="{StaticResource TextLabel}" Margin="0,5,5,0"/>
+                        <TextBlock x:Name="EventTypeTextBlock" Grid.Row="1" Grid.Column="1" Text="N/A" Foreground="{StaticResource TextPrimary}" Margin="0,5,0,0"/>
 
-                        <TextBlock x:Name="MainLinksHeader" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Text="Enlaces Principales:" Foreground="#AAAAAA" Margin="0,10,0,5" Visibility="Collapsed"/>
+                        <TextBlock x:Name="MainLinksHeader" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Text="Enlaces Principales:" Foreground="{StaticResource TextLabel}" Margin="0,10,0,5" Visibility="Collapsed"/>
                         <ItemsControl x:Name="MainEventLinksList" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,0" Visibility="Collapsed">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <TextBlock>
-                                        <Run Text="- " Foreground="White"/>
+                                        <Run Text="- " Foreground="{StaticResource TextPrimary}"/>
                                         <Run Text="{Binding Title}" FontWeight="SemiBold" Foreground="LightBlue"/>
-                                        <Run Text=" (" Foreground="White"/>
-                                        <Run Text="{Binding Url}" FontStyle="Italic" Foreground="#CCCCCC"/>
+                                        <Run Text=" (" Foreground="{StaticResource TextPrimary}"/>
+                                        <Run Text="{Binding Url}" FontStyle="Italic" Foreground="{StaticResource TextPrimary}"/>
                                         <Run Text=")"/>
                                     </TextBlock>
                                 </DataTemplate>
