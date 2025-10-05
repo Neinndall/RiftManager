@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Text.Json;
+using Newtonsoft.Json.Linq;
 using RiftManager.Models;
 
 namespace RiftManager.Interfaces
@@ -9,22 +9,23 @@ namespace RiftManager.Interfaces
         public const string EmbedUrlIdentifier = "https://embed.rgpub.io/"; // Identificador de la URL principal
 
         /// <summary>
-        /// Intenta extraer la URL principal del evento desde el objeto JSON de navegación inicial.
+        /// Intenta extraer la URL principal del evento desde el token JSON de navegación inicial.
         /// </summary>
-        /// <param name="eventElement">El elemento JSON del evento de la navegación inicial.</param>
+        /// <param name="eventToken">El token JSON del evento de la navegación inicial.</param>
         /// <returns>La URL principal si se encuentra y contiene el identificador de embed.rgpub.io, de lo contrario null.</returns>
-        public string GetMainEventUrlFromNavigationItem(JsonElement eventElement)
+        public string GetMainEventUrlFromNavigationItem(JToken eventToken)
         {
-            if (eventElement.TryGetProperty("action", out JsonElement actionElement) && actionElement.ValueKind == JsonValueKind.Object
-                && actionElement.TryGetProperty("payload", out JsonElement payloadElement) && payloadElement.ValueKind == JsonValueKind.Object
-                && payloadElement.TryGetProperty("url", out JsonElement urlElement) && urlElement.ValueKind == JsonValueKind.String)
+            JToken urlToken = eventToken.SelectToken("action.payload.url");
+
+            if (urlToken != null && urlToken.Type == JTokenType.String)
             {
-                string url = urlElement.GetString();
+                string url = urlToken.ToString();
                 if (url != null && url.Contains(EmbedUrlIdentifier, StringComparison.OrdinalIgnoreCase))
                 {
                     return url;
                 }
             }
+            
             return null;
         }
 

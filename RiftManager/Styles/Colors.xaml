@@ -1,0 +1,29 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    
+    <!-- Modern Dark Theme Colors -->
+    <SolidColorBrush x:Key="DarkBackground" Color="#1e1e1e"/>
+    <SolidColorBrush x:Key="SidebarBackground" Color="#FF252526"/>
+
+    <!-- Text -->
+    <SolidColorBrush x:Key="TextPrimary" Color="#FFCCCCCC"/>
+    <SolidColorBrush x:Key="TextSecondary" Color="#FF969696"/>
+    <SolidColorBrush x:Key="TextMuted" Color="#FF6A6A6A"/>
+
+    <!-- Colors -->
+    <SolidColorBrush x:Key="AccentBrush" Color="#FF5577CC"/> 
+    
+    <!-- Color para Bordes -->
+    <SolidColorBrush x:Key="BorderColor" Color="#FF3F3F46"/>
+    
+    <!-- Color para cuando pones el raton encima de una seleccion -->
+    <SolidColorBrush x:Key="HoverColor" Color="#FF3A3A3C"/>
+    
+    <!-- Colores que usará CustomScrollbarStyles.xaml -->
+    <SolidColorBrush x:Key="ScrollBarBackground" Color="#252526" />
+    <SolidColorBrush x:Key="ScrollBarThumbBackground" Color="#505050" />
+    <SolidColorBrush x:Key="ScrollBarThumbHoverBackground" Color="#707070" />
+    <SolidColorBrush x:Key="ScrollBarThumbPressedBackground" Color="#909090" />
+
+
+</ResourceDictionary>

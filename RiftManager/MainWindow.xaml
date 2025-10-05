@@ -106,13 +106,7 @@
                 </StackPanel>
 
                 <!-- Visor de Logs -->
-                <RichTextBox Name="LogRichTextBox" Grid.Row="1" Background="#252526" Foreground="#ccc" BorderBrush="#444" BorderThickness="1" IsReadOnly="True" VerticalScrollBarVisibility="Auto" FontFamily="Consolas" Padding="5">
-                    <RichTextBox.Resources>
-                        <Style TargetType="{x:Type Paragraph}">
-                            <Setter Property="Margin" Value="0"/>
-                        </Style>
-                    </RichTextBox.Resources>
-                </RichTextBox>
+                <RichTextBox Name="LogRichTextBox" Grid.Row="1" Style="{StaticResource LogRichTextBoxStyle}"/>
             </Grid>
         </Grid>
     </Grid>

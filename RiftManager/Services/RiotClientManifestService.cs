@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Text.Json;
-using System.Text.Json.Nodes; // Para usar JsonNode para FlattenObject
 using Newtonsoft.Json.Linq; // Necesario para JObject.Parse y FlattenObject
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -53,7 +51,7 @@ namespace RiftManager.Services
             _logService.LogDebug($"Procesando manifiesto: {manifestUrl}");
             try
             {
-                using JsonDocument document = await _jsonFetcherService.GetJsonDocumentAsync(manifestUrl);
+                JToken document = await _jsonFetcherService.GetJTokenAsync(manifestUrl);
                 if (document == null)
                 {
                     _logService.LogWarning($"No se pudo obtener el manifiesto: {manifestUrl}");
@@ -72,8 +70,8 @@ namespace RiftManager.Services
                     baseUrl += "/";
                 }
                 
-                // Convertir JsonDocument a JObject para FlattenObject
-                var flattenedManifest = ObjectHelper.FlattenObject(JObject.Parse(document.RootElement.GetRawText()));
+                // Aplanar el JToken directamente
+                var flattenedManifest = ObjectHelper.FlattenObject((JObject)document);
 
                 // Filtra solo los valores que son URLs de assets válidos.
                 // Usamos .Values para obtener los objetos dentro del diccionario aplanado.

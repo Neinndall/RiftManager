@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq; 
+using System.Linq;
 using System.Net.Http;
-using System.Text.Json;
 using System.Threading.Tasks;
-using RiftManager.Models; 
-using RiftManager.Services; 
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using RiftManager.Models;
+using RiftManager.Services;
 
 namespace RiftManager.Services
 {
@@ -51,14 +52,14 @@ namespace RiftManager.Services
                     try
                     {
                         string jsonContent = await File.ReadAllTextAsync(jsonFile);
-                        using JsonDocument document = JsonDocument.Parse(jsonContent);
-                        JsonElement root = document.RootElement;
+                        JToken root = JToken.Parse(jsonContent);
 
                         if (fileName.StartsWith("MotionComicLettering", StringComparison.OrdinalIgnoreCase))
                         {
-                            if (root.TryGetProperty("letteringSfx", out var letteringSfx) && letteringSfx.TryGetProperty("clipName", out var clipNameElement))
+                            JToken clipNameToken = root.SelectToken("letteringSfx.clipName");
+                            if (clipNameToken != null && clipNameToken.Type == JTokenType.String)
                             {
-                                string clipName = clipNameElement.GetString();
+                                string clipName = clipNameToken.ToString();
                                 if (!string.IsNullOrEmpty(clipName))
                                 {
                                     letteringAudioUrls.Add($"{cleanBaseUrl}/AudioLocales/en_US/{clipName}.ogg");
@@ -67,22 +68,23 @@ namespace RiftManager.Services
                         }
                         else if (fileName.StartsWith("MotionComicPanel", StringComparison.OrdinalIgnoreCase))
                         {
-                            if (root.TryGetProperty("panelSfx", out var panelSfx) && panelSfx.TryGetProperty("clipName", out var panelClipNameElement))
+                            JToken panelClipNameToken = root.SelectToken("panelSfx.clipName");
+                            if (panelClipNameToken != null && panelClipNameToken.Type == JTokenType.String)
                             {
-                                string clipName = panelClipNameElement.GetString();
+                                string clipName = panelClipNameToken.ToString();
                                 if (!string.IsNullOrEmpty(clipName))
                                 {
                                     panelAudioUrls.Add($"{cleanBaseUrl}/SoundFX/{clipName}.ogg");
                                 }
                             }
 
-                            if (root.TryGetProperty("audioEvents", out var audioEvents) && audioEvents.ValueKind == JsonValueKind.Array)
+                            if (root["audioEvents"] is JArray audioEvents)
                             {
-                                foreach (var audioEvent in audioEvents.EnumerateArray())
+                                foreach (var audioEvent in audioEvents)
                                 {
-                                    if (audioEvent.TryGetProperty("clipName", out var eventClipNameElement))
+                                    if (audioEvent["clipName"] is JToken eventClipNameElement)
                                     {
-                                        string clipName = eventClipNameElement.GetString();
+                                        string clipName = eventClipNameElement.ToString();
                                         if (!string.IsNullOrEmpty(clipName))
                                         {
                                             panelAudioUrls.Add($"{cleanBaseUrl}/SoundFX/{clipName}.ogg");

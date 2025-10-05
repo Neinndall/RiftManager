@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO; // Necesario para Path.GetFileName
 using System.Linq; // Necesario para .Select
-using System.Text.Json;
+using Newtonsoft.Json.Linq; // Cambiado desde System.Text.Json
 using System.Text.RegularExpressions;
 using RiftManager.Services; // Para LogService
 
@@ -18,31 +18,32 @@ namespace RiftManager.Interfaces
         }
 
         /// <summary>
-        /// Parsea un documento JsonDocument de catálogo y extrae las URLs de bundles relevantes.
+        /// Parsea un token JToken de catálogo y extrae las URLs de bundles relevantes.
         /// Este método es llamado durante la fase de *rastreo* por BundleService,
         /// por lo tanto, debe ser lo más silencioso posible, solo reportando errores críticos
         /// o depuración muy específica. El conteo de bundles debe ser logueado por el llamador (EventProcessor).
         /// </summary>
-        /// <param name="document">El JsonDocument que contiene el catálogo.</param>
+        /// <param name="rootToken">El JToken que contiene el catálogo.</param>
         /// <param name="assetBaseUrl">La URL base para construir las URLs completas de los bundles.</param>
         /// <param name="metagameId">ID de metajuego opcional para filtrar bundles.</param>
         /// <returns>Una lista de URLs de bundles.</returns>
-        public List<string> ParseBundleUrlsFromCatalogJson(JsonDocument document, string assetBaseUrl, string metagameId = null)
+        public List<string> ParseBundleUrlsFromCatalogJson(JToken rootToken, string assetBaseUrl, string metagameId = null)
         {
             _logService.LogDebug($"CatalogParser: ParseBundleUrlsFromCatalogJson llamado con Metagame ID: {metagameId ?? "N/A"}");
             List<string> bundleUrls = new List<string>();
 
-            if (document == null)
+            if (rootToken == null)
             {
-                _logService.LogWarning("CatalogParser: El documento JSON del catálogo es nulo al intentar parsear.");
+                _logService.LogWarning("CatalogParser: El token JSON del catálogo es nulo al intentar parsear.");
                 return bundleUrls;
             }
-            
-            if (document.RootElement.TryGetProperty("m_InternalIds", out JsonElement internalIdsElement) && internalIdsElement.ValueKind == JsonValueKind.Array)
+
+            JToken internalIdsToken = rootToken["m_InternalIds"];
+            if (internalIdsToken != null && internalIdsToken.Type == JTokenType.Array)
             {
-                foreach (JsonElement idElement in internalIdsElement.EnumerateArray())
+                foreach (JToken idElement in internalIdsToken)
                 {
-                    string internalPath = idElement.GetString();
+                    string internalPath = idElement.ToString();
                     if (string.IsNullOrEmpty(internalPath)) continue;
 
                     string fullBundleUrl;

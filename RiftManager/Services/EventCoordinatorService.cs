@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 using RiftManager.Models;
 using RiftManager.Interfaces;
 using RiftManager.Services;
+using Newtonsoft.Json.Linq;
 
 namespace RiftManager.Services
 {
@@ -39,23 +39,23 @@ namespace RiftManager.Services
         {
             Dictionary<string, EventDetails> eventData = new Dictionary<string, EventDetails>();
 
-            using JsonDocument document = await _jsonFetcherService.GetJsonDocumentAsync(navigationUrl, suppressConsoleOutput: true);
+            JToken document = await _jsonFetcherService.GetJTokenAsync(navigationUrl, suppressConsoleOutput: true);
             if (document == null)
             {
                 _logService.LogWarning("[EventCoordinatorService] No se pudo obtener el documento JSON de navegación. Asegúrate de que la URL sea correcta o haya conexión.");
                 return eventData;
             }
 
-            if (document.RootElement.TryGetProperty("data", out JsonElement dataElement) && dataElement.ValueKind == JsonValueKind.Array)
+            JToken dataToken = document["data"];
+            if (dataToken != null && dataToken.Type == JTokenType.Array)
             {
-                foreach (JsonElement eventElement in dataElement.EnumerateArray())
+                foreach (JToken eventElement in dataToken)
                 {
-                    if (eventElement.TryGetProperty("navigationItemID", out JsonElement navigationItemIdElement) && navigationItemIdElement.ValueKind == JsonValueKind.String
-                        && eventElement.TryGetProperty("title", out JsonElement titleElement) && titleElement.ValueKind == JsonValueKind.String)
-                    {
-                        string navigationItemId = navigationItemIdElement.GetString()!;
-                        string eventTitle = titleElement.GetString()!;
+                    string navigationItemId = eventElement.Value<string>("navigationItemID");
+                    string eventTitle = eventElement.Value<string>("title");
 
+                    if (!string.IsNullOrEmpty(navigationItemId) && !string.IsNullOrEmpty(eventTitle))
+                    {
                         EventDetails currentEvent = new EventDetails(eventTitle, navigationItemId);
 
                         string fullCatalogJsonUrl = null;
@@ -92,17 +92,8 @@ namespace RiftManager.Services
                             }
                         }
 
-                        if (eventElement.TryGetProperty("background", out JsonElement backgroundElement) && backgroundElement.ValueKind == JsonValueKind.Object
-                            && backgroundElement.TryGetProperty("url", out JsonElement backgroundUrlElement) && backgroundUrlElement.ValueKind == JsonValueKind.String)
-                        {
-                            currentEvent.BackgroundUrl = backgroundUrlElement.GetString();
-                        }
-
-                        if (eventElement.TryGetProperty("icon", out JsonElement iconElement) && iconElement.ValueKind == JsonValueKind.Object
-                            && iconElement.TryGetProperty("url", out JsonElement iconUrlElement) && iconUrlElement.ValueKind == JsonValueKind.String)
-                        {
-                            currentEvent.IconUrl = iconUrlElement.GetString();
-                        }
+                        currentEvent.BackgroundUrl = eventElement.SelectToken("background.url")?.ToString();
+                        currentEvent.IconUrl = eventElement.SelectToken("icon.url")?.ToString();
 
                         bool requiresDetailPageFetch = true;
                         if (navigationItemId.Equals("info-hub", StringComparison.OrdinalIgnoreCase) ||
@@ -114,13 +105,13 @@ namespace RiftManager.Services
                         if (requiresDetailPageFetch)
                         {
                             string eventDataUrl = $"{_baseUrlV2}/page/{navigationItemId}";
-                            JsonDocument eventDetailsDocument = await _jsonFetcherService.GetJsonDocumentAsync(eventDataUrl, suppressConsoleOutput: true);
-                            if (eventDetailsDocument != null)
+                            JToken eventDetailsToken = await _jsonFetcherService.GetJTokenAsync(eventDataUrl, suppressConsoleOutput: true);
+                            if (eventDetailsToken != null)
                             {
                                 // --- CAMBIO ADICIONAL APLICADO AQUÍ ---
                                 // Asegúrate de que DetailPageParser SIEMPRE se llame para buscar enlaces adicionales,
                                 // sin importar si ya encontramos uno en la navegación inicial.
-                                List<MainEventLink> detailPageMainLinks = _detailPageParser.GetMainEventUrlsFromDetailPage(eventDetailsDocument, currentEvent);
+                                List<MainEventLink> detailPageMainLinks = _detailPageParser.GetMainEventUrlsFromDetailPage(eventDetailsToken, currentEvent);
 
                                 // Agrega los enlaces de la página de detalle, evitando duplicados.
                                 foreach (var link in detailPageMainLinks)
@@ -157,7 +148,7 @@ namespace RiftManager.Services
                                     }
                                 }
 
-                                currentEvent.AdditionalAssetUrls.AddRange(_detailPageParser.ExtractAdditionalAssetsUrls(eventDetailsDocument));
+                                currentEvent.AdditionalAssetUrls.AddRange(_detailPageParser.ExtractAdditionalAssetsUrls(eventDetailsToken));
                             }
                         }
 

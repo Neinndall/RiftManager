@@ -1,14 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Reflection;
-using System.Text.Json;
 using System.Threading.Tasks;
 using RiftManager.Models;
 using RiftManager.Interfaces;
 using RiftManager.Services;
+using RiftManager.Utils;
+using Newtonsoft.Json.Linq;
 
 namespace RiftManager.Services
 {
@@ -34,7 +34,7 @@ namespace RiftManager.Services
 
             if (string.IsNullOrEmpty(catalogJsonUrl) || string.IsNullOrEmpty(assetBaseUrl))
             {
-                _logService.Log("[BundleService] Catalog: No disponible");
+                _logService.Log("[BundleService] Catalog: Not available");
                 return bundleUrls;
             }
             else
@@ -42,9 +42,9 @@ namespace RiftManager.Services
                 _logService.Log($"[BundleService] Catalog: {catalogJsonUrl}");
             }
 
-            _logService.LogDebug($"[BundleService] Base de URL para assets/bundles: {assetBaseUrl}");
-            _logService.LogDebug($"[BundleService] Base Url para descarga de Bundles: {assetBaseUrl}WebGL/");
-            _logService.LogDebug($"[BundleService] Metagame ID recibido: {metagameId ?? "N/A"}");
+            _logService.LogDebug($"[BundleService] Base URL for assets/bundles: {assetBaseUrl}");
+            _logService.LogDebug($"[BundleService] Base URL for Bundle downloads: {assetBaseUrl}WebGL/");
+            _logService.LogDebug($"[BundleService] Metagame ID received: {metagameId ?? "N/A"}");
 
             string tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
             Directory.CreateDirectory(tempDir);
@@ -54,7 +54,7 @@ namespace RiftManager.Services
 
             try
             {
-                // Paso 1: Descargar el archivo .bin
+                // Step 1: Download the .bin file
                 using (var httpClient = new HttpClient())
                 {
                     var response = await httpClient.GetAsync(catalogJsonUrl);
@@ -64,15 +64,15 @@ namespace RiftManager.Services
                         await response.Content.CopyToAsync(fs);
                     }
                 }
-                _logService.LogDebug($"[BundleService] Catalog.bin descargado en: {binPath}");
+                _logService.LogDebug($"[BundleService] Catalog.bin downloaded to: {binPath}");
 
-                // Paso 2: Extraer bintojson.exe del recurso embebido
+                // Step 2: Extract bintojson.exe from embedded resource
                 var assembly = Assembly.GetExecutingAssembly();
                 using (Stream stream = assembly.GetManifestResourceStream("RiftManager.Resources.bintojson.exe"))
                 {
                     if (stream == null)
                     {
-                        _logService.LogError("[BundleService] No se pudo encontrar el recurso embebido 'bintojson.exe'.");
+                        _logService.LogError("[BundleService] Could not find embedded resource 'bintojson.exe'.");
                         return bundleUrls;
                     }
                     using (var fileStream = new FileStream(exePath, FileMode.Create, FileAccess.Write))
@@ -80,9 +80,9 @@ namespace RiftManager.Services
                         await stream.CopyToAsync(fileStream);
                     }
                 }
-                _logService.LogDebug($"[BundleService] bintojson.exe extraído en: {exePath}");
+                _logService.LogDebug($"[BundleService] bintojson.exe extracted to: {exePath}");
 
-                // Paso 3: Ejecutar la conversión
+                // Step 3: Execute conversion
                 using (Process process = new Process())
                 {
                     process.StartInfo.FileName = exePath;
@@ -99,45 +99,41 @@ namespace RiftManager.Services
 
                     if (process.ExitCode != 0)
                     {
-                        _logService.LogError($"[BundleService] bintojson.exe falló con código {process.ExitCode}. Error: {error}");
+                        _logService.LogError($"[BundleService] bintojson.exe failed with code {process.ExitCode}. Error: {error}");
                         return bundleUrls;
                     }
-                    _logService.LogDebug($"[BundleService] Conversión de .bin a .json completada. Salida: {output}");
+                    _logService.LogDebug($"[BundleService] .bin to .json conversion complete. Output: {output}");
                 }
 
-                // Paso 4: Procesar el archivo JSON generado
+                // Step 4: Process the generated JSON file
                 if (!File.Exists(jsonPath))
                 {
-                    _logService.LogError($"[BundleService] El archivo {jsonPath} no fue creado por el proceso de conversión.");
+                    _logService.LogError($"[BundleService] File {jsonPath} was not created by the conversion process.");
                     return bundleUrls;
                 }
 
-                using (var stream = File.OpenRead(jsonPath))
-                {
-                    using (JsonDocument document = await JsonDocument.ParseAsync(stream))
-                    {
-                        bundleUrls = _catalogParser.ParseBundleUrlsFromCatalogJson(document, assetBaseUrl, metagameId);
-                        _logService.Log($"[BundleService] Se encontraron {bundleUrls.Count} URLs de bundles válidas en el catálogo.");
-                    }
-                }
+                string jsonText = await File.ReadAllTextAsync(jsonPath);
+                JToken rootToken = JToken.Parse(jsonText);
+                bundleUrls = _catalogParser.ParseBundleUrlsFromCatalogJson(rootToken, assetBaseUrl, metagameId);
+                _logService.Log($"[BundleService] Found {bundleUrls.Count} valid bundle URLs in the catalog.");
             }
             catch (Exception e)
             {
-                _logService.LogError($"[BundleService] Un error inesperado ocurrió en BundleService al obtener bundles: {e.Message}");
+                _logService.LogError($"[BundleService] An unexpected error occurred in BundleService while fetching bundles: {e.Message}");
             }
             finally
             {
-                // Paso 5: Limpieza de archivos temporales
+                // Step 5: Clean up temporary files
                 if (Directory.Exists(tempDir))
                 {
                     try
                     {
                         Directory.Delete(tempDir, true);
-                        _logService.LogDebug($"[BundleService] Directorio temporal {tempDir} eliminado.");
+                        _logService.LogDebug($"[BundleService] Temporary directory {tempDir} deleted.");
                     }
                     catch (Exception ex)
                     {
-                        _logService.LogWarning($"[BundleService] No se pudo eliminar el directorio temporal {tempDir}. Error: {ex.Message}");
+                        _logService.LogWarning($"[BundleService] Could not delete temporary directory {tempDir}. Error: {ex.Message}");
                     }
                 }
             }
@@ -145,7 +141,6 @@ namespace RiftManager.Services
             return bundleUrls;
         }
 
-        // ... (el resto del código de ExtractAssetsForEvent permanece igual)
         public async Task ExtractAssetsForEvent(string eventNavigationItemId, string assetsRootFolderPath)
         {
             string bundlesInputPath = Path.Combine(assetsRootFolderPath, eventNavigationItemId, "Bundles");
@@ -153,24 +148,31 @@ namespace RiftManager.Services
 
             if (!Directory.Exists(bundlesInputPath))
             {
-                _logService.LogWarning($"[BundleService] No se encontraron bundles en {bundlesInputPath}. Saltando la extracción de assets para {eventNavigationItemId}.");
+                _logService.LogWarning($"[BundleService] No bundles found in {bundlesInputPath}. Skipping asset extraction for {eventNavigationItemId}.");
                 return;
             }
 
             Directory.CreateDirectory(assetsOutputPath);
 
-            string assetStudioCliExePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Tools", "AssetStudioModCLI.exe");
+            string tempToolsDir = Path.Combine(Path.GetTempPath(), "RiftManager", Guid.NewGuid().ToString());
+            Directory.CreateDirectory(tempToolsDir);
+            string assetStudioCliExePath = Path.Combine(tempToolsDir, "AssetStudio", "AssetStudioModCLI.exe");
 
-            if (!File.Exists(assetStudioCliExePath))
-            {
-                _logService.LogError("[BundleService] AssetStudio no encontrado en la ruta esperada. Asegúrate de que esté en la carpeta 'Tools'.");
-                return;
-            }
-
-            _logService.Log($"[BundleService] Iniciando extracción de assets de bundles para {eventNavigationItemId}");
-            string arguments = $"\"{bundlesInputPath}\" -o \"{assetsOutputPath}\"";
             try
             {
+                _logService.LogDebug("[BundleService] Extracting AssetStudioModCLI from embedded resources...");
+                EmbeddedResourceManager.ExtractDirectory("AssetStudio", tempToolsDir);
+                _logService.LogDebug($"[BundleService] AssetStudioModCLI extracted to: {tempToolsDir}");
+
+                if (!File.Exists(assetStudioCliExePath))
+                {
+                    _logService.LogError($"[BundleService] AssetStudio not found at the expected extraction path: {assetStudioCliExePath}.");
+                    return;
+                }
+
+                _logService.Log($"[BundleService] Starting bundle asset extraction for {eventNavigationItemId}");
+                string arguments = $"\"{bundlesInputPath}\" -o \"{assetsOutputPath}\"";
+                
                 using (Process process = new Process())
                 {
                     process.StartInfo.FileName = assetStudioCliExePath;
@@ -183,7 +185,7 @@ namespace RiftManager.Services
                     {
                         if (!string.IsNullOrEmpty(e.Data))
                         {
-                            _logService.LogError($"[BundleService] Error de AssetStudio para {eventNavigationItemId}: {e.Data}");
+                            _logService.LogError($"[BundleService] AssetStudio error for {eventNavigationItemId}: {e.Data}");
                         }
                     };
 
@@ -193,17 +195,32 @@ namespace RiftManager.Services
 
                     if (process.ExitCode == 0)
                     {
-                        _logService.LogSuccess($"BundleService: Extracción de assets de bundles para '{eventNavigationItemId}' completada exitosamente.");
+                        _logService.LogSuccess($"BundleService: Bundle asset extraction for '{eventNavigationItemId}' completed successfully.");
                     }
                     else
                     {
-                        _logService.LogError($"BundleService: AssetStudio terminó con código de salida {process.ExitCode} para '{eventNavigationItemId}'. Puede haber errores.");
+                        _logService.LogError($"BundleService: AssetStudio finished with exit code {process.ExitCode} for '{eventNavigationItemId}'. There might be errors.");
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logService.LogError($"BundleService: Error al ejecutar AssetStudio para '{eventNavigationItemId}': {ex.Message}");
+                _logService.LogError($"BundleService: Error executing AssetStudio for '{eventNavigationItemId}': {ex.Message}");
+            }
+            finally
+            {
+                if (Directory.Exists(tempToolsDir))
+                {
+                    try
+                    {
+                        Directory.Delete(tempToolsDir, true);
+                        _logService.LogDebug($"[BundleService] Temporary tools directory {tempToolsDir} deleted.");
+                    }
+                    catch (Exception ex)
+                    {
+                        _logService.LogWarning($"[BundleService] Could not delete temporary tools directory {tempToolsDir}. Error: {ex.Message}");
+                    }
+                }
             }
         }
     }

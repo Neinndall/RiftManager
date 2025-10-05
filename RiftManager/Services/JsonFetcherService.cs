@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Net.Http;
-using System.Text.Json;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace RiftManager.Services
 {
@@ -24,8 +25,8 @@ namespace RiftManager.Services
         /// Si es true, suprime la salida de consola (LogDebug) para las fases de obtención y éxito.
         /// Los errores (LogError) siempre se mostrarán, independientemente de este parámetro.
         /// </param>
-        /// <returns>Un JsonDocument si la petición es exitosa y el JSON es válido, de lo contrario null.</returns>
-        public async Task<JsonDocument> GetJsonDocumentAsync(string url, bool suppressConsoleOutput = false)
+        /// <returns>Un JToken si la petición es exitosa y el JSON es válido, de lo contrario null.</returns>
+        public async Task<JToken> GetJTokenAsync(string url, bool suppressConsoleOutput = false)
         {
             try
             {
@@ -44,7 +45,7 @@ namespace RiftManager.Services
                 {
                     _logService.LogDebug("JsonFetcherService: Datos obtenidos exitosamente.");
                 }
-                return JsonDocument.Parse(jsonResponse);
+                return JToken.Parse(jsonResponse);
             }
             catch (HttpRequestException e)
             {

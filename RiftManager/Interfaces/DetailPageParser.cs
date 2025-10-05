@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
+using Newtonsoft.Json.Linq;
 using RiftManager.Models; // Asegúrate de agregar esta directiva using!
 using RiftManager.Services; // Necesario para LogService
 
@@ -20,28 +20,26 @@ namespace RiftManager.Interfaces
         /// <summary>
         /// Extrae URLs de assets adicionales de un documento JSON de página de detalle.
         /// </summary>
-        public List<string> ExtractAdditionalAssetsUrls(JsonDocument eventDetailPageData)
+        public List<string> ExtractAdditionalAssetsUrls(JToken eventDetailPageData)
         {
             List<string> assetUrls = new List<string>();
-            if (eventDetailPageData == null)
-            {
-                return assetUrls;
-            }
+            if (eventDetailPageData == null) return assetUrls;
 
             try
             {
-                if (eventDetailPageData.RootElement.TryGetProperty("blades", out JsonElement bladesElement) && bladesElement.ValueKind == JsonValueKind.Array)
+                JToken bladesToken = eventDetailPageData["blades"];
+                if (bladesToken != null && bladesToken.Type == JTokenType.Array)
                 {
-                    foreach (JsonElement blade in bladesElement.EnumerateArray())
+                    foreach (JToken blade in bladesToken)
                     {
                         // Nueva lógica para backdrop.background.url (cuando es una imagen directa)
-                        if (blade.TryGetProperty("backdrop", out JsonElement backdropElement) && backdropElement.ValueKind == JsonValueKind.Object &&
-                            backdropElement.TryGetProperty("background", out JsonElement backgroundElement) && backgroundElement.ValueKind == JsonValueKind.Object)
+                        JToken backgroundToken = blade.SelectToken("backdrop.background");
+                        if (backgroundToken != null)
                         {
                             // AÑADIDO: Si background tiene una propiedad "url" y es de tipo string, es una imagen directa.
-                            if (backgroundElement.TryGetProperty("url", out JsonElement backgroundUrlElement) && backgroundUrlElement.ValueKind == JsonValueKind.String)
+                            if (backgroundToken["url"] is JToken backgroundUrlToken && backgroundUrlToken.Type == JTokenType.String)
                             {
-                                string backgroundImageUrl = backgroundUrlElement.GetString();
+                                string backgroundImageUrl = backgroundUrlToken.ToString();
                                 if (!string.IsNullOrEmpty(backgroundImageUrl))
                                 {
                                     assetUrls.Add(backgroundImageUrl);
@@ -49,45 +47,41 @@ namespace RiftManager.Interfaces
                             }
 
                             // Lógica existente para backdrop.background.sources (video)
-                            if (backgroundElement.TryGetProperty("sources", out JsonElement sourcesElement) && sourcesElement.ValueKind == JsonValueKind.Array)
+                            if (backgroundToken["sources"] is JArray sourcesArray)
                             {
-                                foreach (JsonElement source in sourcesElement.EnumerateArray())
+                                foreach (var source in sourcesArray)
                                 {
-                                    if (source.TryGetProperty("src", out JsonElement srcElement) && srcElement.ValueKind == JsonValueKind.String)
+                                    if (source["src"] is JToken srcToken && srcToken.Type == JTokenType.String)
                                     {
-                                        assetUrls.Add(srcElement.GetString()!);
+                                        assetUrls.Add(srcToken.ToString());
                                     }
                                 }
                             }
                             // Lógica existente para backdrop.background.thumbnail (thumbnail de video)
-                            if (backgroundElement.TryGetProperty("thumbnail", out JsonElement thumbnailElement) && thumbnailElement.ValueKind == JsonValueKind.Object &&
-                                thumbnailElement.TryGetProperty("url", out JsonElement thumbnailUrlElement) && thumbnailUrlElement.ValueKind == JsonValueKind.String)
+                            if (backgroundToken.SelectToken("thumbnail.url") is JToken thumbnailUrlToken && thumbnailUrlToken.Type == JTokenType.String)
                             {
-                                assetUrls.Add(thumbnailUrlElement.GetString()!);
+                                assetUrls.Add(thumbnailUrlToken.ToString());
                             }
                         }
 
                         // header.media (imagen del encabezado)
-                        if (blade.TryGetProperty("header", out JsonElement headerElement) && headerElement.ValueKind == JsonValueKind.Object &&
-                            headerElement.TryGetProperty("media", out JsonElement mediaElement) && mediaElement.ValueKind == JsonValueKind.Object &&
-                            mediaElement.TryGetProperty("url", out JsonElement mediaUrlElement) && mediaUrlElement.ValueKind == JsonValueKind.String)
+                        if (blade.SelectToken("header.media.url") is JToken mediaUrlToken && mediaUrlToken.Type == JTokenType.String)
                         {
-                            assetUrls.Add(mediaUrlElement.GetString()!);
+                            assetUrls.Add(mediaUrlToken.ToString());
                         }
 
                         // leagueClientTabContentGroups.ctas.media (imágenes de skins, etc.)
-                        if (blade.TryGetProperty("leagueClientTabContentGroups", out JsonElement tabGroupsElement) && tabGroupsElement.ValueKind == JsonValueKind.Array)
+                        if (blade["leagueClientTabContentGroups"] is JArray tabGroupsArray)
                         {
-                            foreach (JsonElement tabGroup in tabGroupsElement.EnumerateArray())
+                            foreach (JToken tabGroup in tabGroupsArray)
                             {
-                                if (tabGroup.TryGetProperty("ctas", out JsonElement ctasElement) && ctasElement.ValueKind == JsonValueKind.Array)
+                                if (tabGroup["ctas"] is JArray ctasArray)
                                 {
-                                    foreach (JsonElement cta in ctasElement.EnumerateArray())
+                                    foreach (JToken cta in ctasArray)
                                     {
-                                        if (cta.TryGetProperty("media", out JsonElement ctaMediaElement) && ctaMediaElement.ValueKind == JsonValueKind.Object &&
-                                            ctaMediaElement.TryGetProperty("url", out JsonElement ctaMediaUrlElement) && ctaMediaUrlElement.ValueKind == JsonValueKind.String)
+                                        if (cta.SelectToken("media.url") is JToken ctaMediaUrlToken && ctaMediaUrlToken.Type == JTokenType.String)
                                         {
-                                            assetUrls.Add(ctaMediaUrlElement.GetString()!);
+                                            assetUrls.Add(ctaMediaUrlToken.ToString());
                                         }
                                     }
                                 }
@@ -95,37 +89,24 @@ namespace RiftManager.Interfaces
                         }
 
                         // links.media (imágenes de cinematic, motion comics secundarios, etc.) y iframes
-                        JsonElement currentLinksElement;
-
-                        // Priorizar links dentro de header si existen, si no, buscar en links directos del blade
-                        if (blade.TryGetProperty("header", out JsonElement headerBladeElement) && headerBladeElement.ValueKind == JsonValueKind.Object &&
-                            headerBladeElement.TryGetProperty("links", out JsonElement headerLinksElement) && headerLinksElement.ValueKind == JsonValueKind.Array)
+                        JToken currentLinksToken = blade.SelectToken("header.links") ?? blade["links"];
+                        if (currentLinksToken is JArray linksArray)
                         {
-                            currentLinksElement = headerLinksElement;
-                        }
-                        else if (blade.TryGetProperty("links", out JsonElement directLinksElement) && directLinksElement.ValueKind == JsonValueKind.Array)
-                        {
-                            currentLinksElement = directLinksElement;
-                        }
-                        else
-                        {
-                            continue; // No hay links en este blade
-                        }
-
-                        foreach (JsonElement link in currentLinksElement.EnumerateArray())
-                        {
-                            if (link.TryGetProperty("media", out JsonElement linkMediaElement) && linkMediaElement.ValueKind == JsonValueKind.Object &&
-                                linkMediaElement.TryGetProperty("url", out JsonElement linkMediaUrlElement) && linkMediaUrlElement.ValueKind == JsonValueKind.String)
+                            foreach (JToken link in linksArray)
                             {
-                                assetUrls.Add(linkMediaUrlElement.GetString()!);
-                            }
-                            // Buscar URLs de iframes que podrían ser assets o contenido relevante
-                            if (link.TryGetProperty("action", out JsonElement actionElement) && actionElement.ValueKind == JsonValueKind.Object &&
-                                actionElement.TryGetProperty("type", out JsonElement typeElement) && typeElement.GetString() == "open_iframe" &&
-                                actionElement.TryGetProperty("payload", out JsonElement payloadElement) && payloadElement.ValueKind == JsonValueKind.Object &&
-                                payloadElement.TryGetProperty("url", out JsonElement iframeUrlElement) && iframeUrlElement.ValueKind == JsonValueKind.String)
-                            {
-                                assetUrls.Add(iframeUrlElement.GetString()!);
+                                if (link.SelectToken("media.url") is JToken linkMediaUrlToken && linkMediaUrlToken.Type == JTokenType.String)
+                                {
+                                    assetUrls.Add(linkMediaUrlToken.ToString());
+                                }
+                                // Buscar URLs de iframes que podrían ser assets o contenido relevante
+                                JToken actionToken = link["action"];
+                                if (actionToken != null && actionToken.Value<string>("type") == "open_iframe")
+                                {
+                                    if (actionToken.SelectToken("payload.url") is JToken iframeUrlToken && iframeUrlToken.Type == JTokenType.String)
+                                    {
+                                        assetUrls.Add(iframeUrlToken.ToString());
+                                    }
+                                }
                             }
                         }
                     }
@@ -142,14 +123,14 @@ namespace RiftManager.Interfaces
         /// Intenta extraer todas las URLs principales del evento y sus MetagameIds desde el documento JSON de la página de detalle.
         /// También asigna el título del evento al objeto EventDetails proporcionado.
         /// </summary>
-        /// <param name="eventDetailsDocument">El documento JSON de la página de detalle del evento.</param>
+        /// <param name="eventDetailsToken">El token JSON de la página de detalle del evento.</param>
         /// <param name="eventDetailsToPopulate">El objeto EventDetails a rellenar con el título.</param>
         /// <returns>Una lista de objetos MainEventLink si se encuentran URLs principales, de lo contrario una lista vacía.</returns>
-        public List<MainEventLink> GetMainEventUrlsFromDetailPage(JsonDocument eventDetailsDocument, EventDetails eventDetailsToPopulate) // ¡Cambio de retorno!
+        public List<MainEventLink> GetMainEventUrlsFromDetailPage(JToken eventDetailsToken, EventDetails eventDetailsToPopulate)
         {
             List<MainEventLink> foundMainEventLinks = new List<MainEventLink>(); // Lista para almacenar todas las URLs encontradas
 
-            if (eventDetailsDocument == null || eventDetailsToPopulate == null)
+            if (eventDetailsToken == null || eventDetailsToPopulate == null)
             {
                 return foundMainEventLinks; // Retorna lista vacía si la entrada es nula
             }
@@ -157,55 +138,42 @@ namespace RiftManager.Interfaces
             try
             {
                 // Intenta obtener el título (asumiendo que está a nivel raíz)
-                if (eventDetailsDocument.RootElement.TryGetProperty("title", out JsonElement titleElement) && titleElement.ValueKind == JsonValueKind.String)
+                if (eventDetailsToken["title"] is JToken titleToken && titleToken.Type == JTokenType.String)
                 {
-                    eventDetailsToPopulate.Title = titleElement.GetString()!;
+                    eventDetailsToPopulate.Title = titleToken.ToString();
                 }
 
-                if (eventDetailsDocument.RootElement.TryGetProperty("blades", out JsonElement bladesElement) && bladesElement.ValueKind == JsonValueKind.Array)
+                if (eventDetailsToken["blades"] is JArray bladesArray)
                 {
-                    foreach (JsonElement blade in bladesElement.EnumerateArray())
+                    foreach (JToken blade in bladesArray)
                     {
-                        JsonElement currentLinksElement;
-
-                        // Priorizar links dentro de header si existen, si no, buscar en links directos del blade
-                        if (blade.TryGetProperty("header", out JsonElement headerBladeElement) && headerBladeElement.ValueKind == JsonValueKind.Object &&
-                            headerBladeElement.TryGetProperty("links", out JsonElement headerLinksElement) && headerLinksElement.ValueKind == JsonValueKind.Array)
+                        JToken currentLinksToken = blade.SelectToken("header.links") ?? blade["links"];
+                        if (currentLinksToken is JArray linksArray)
                         {
-                            currentLinksElement = headerLinksElement;
-                        }
-                        else if (blade.TryGetProperty("links", out JsonElement directLinksElement) && directLinksElement.ValueKind == JsonValueKind.Array)
-                        {
-                            currentLinksElement = directLinksElement;
-                        }
-                        else
-                        {
-                            continue; // No hay links relevantes en este blade, pasar al siguiente
-                        }
-
-                        foreach (JsonElement link in currentLinksElement.EnumerateArray())
-                        {
-                            if (link.TryGetProperty("action", out JsonElement actionElement) && actionElement.ValueKind == JsonValueKind.Object &&
-                                actionElement.TryGetProperty("type", out JsonElement typeElement) && typeElement.GetString() == "lc_open_metagame" &&
-                                actionElement.TryGetProperty("payload", out JsonElement payloadElement) && payloadElement.ValueKind == JsonValueKind.Object &&
-                                payloadElement.TryGetProperty("url", out JsonElement urlElement) && urlElement.ValueKind == JsonValueKind.String)
+                            foreach (JToken link in linksArray)
                             {
-                                string currentUrl = urlElement.GetString();
-                                // Es importante verificar si 'metagameId' existe antes de intentar obtenerlo
-                                string currentMetagameId = payloadElement.TryGetProperty("metagameId", out JsonElement metagameIdElement) && metagameIdElement.ValueKind == JsonValueKind.String
-                                                            ? metagameIdElement.GetString() : null;
-                                // También obtenemos el título del link
-                                string linkTitle = link.TryGetProperty("title", out JsonElement linkTitleElement) && linkTitleElement.ValueKind == JsonValueKind.String
-                                                    ? linkTitleElement.GetString() : null;
-
-                                if (currentUrl != null && currentUrl.Contains(EmbedUrlIdentifier, StringComparison.OrdinalIgnoreCase))
+                                JToken actionToken = link["action"];
+                                if (actionToken != null && actionToken.Value<string>("type") == "lc_open_metagame")
                                 {
-                                    Console.WriteLine($"DEBUG: URL principal de metajuego encontrada: {currentUrl} (MetagameId: {currentMetagameId ?? "N/A"})");
-                                    foundMainEventLinks.Add(new MainEventLink(currentUrl)
+                                    JToken payloadToken = actionToken["payload"];
+                                    if (payloadToken != null)
                                     {
-                                        MetagameId = currentMetagameId,
-                                        Title = linkTitle // Asignamos el título del link
-                                    });
+                                        string currentUrl = payloadToken.Value<string>("url");
+                                        // Es importante verificar si 'metagameId' existe antes de intentar obtenerlo
+                                        string currentMetagameId = payloadToken.Value<string>("metagameId");
+                                        // También obtenemos el título del link
+                                        string linkTitle = link.Value<string>("title");
+
+                                        if (currentUrl != null && currentUrl.Contains(EmbedUrlIdentifier, StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            Console.WriteLine($"DEBUG: URL principal de metajuego encontrada: {currentUrl} (MetagameId: {currentMetagameId ?? "N/A"})");
+                                            foundMainEventLinks.Add(new MainEventLink(currentUrl)
+                                            {
+                                                MetagameId = currentMetagameId,
+                                                Title = linkTitle // Asignamos el título del link
+                                            });
+                                        }
+                                    }
                                 }
                             }
                         }

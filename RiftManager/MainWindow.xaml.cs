@@ -27,6 +27,7 @@ namespace RiftManager
         public MainWindow(LogService logService, EventCoordinatorService eventService, EventProcessor eventProcessor, RiotClientManifestService riotClientManifestService)
         {
             InitializeComponent();
+            LogRichTextBox.Document = new FlowDocument();
 
             // Initialize fields from injected services
             _logService = logService;
@@ -48,9 +49,9 @@ namespace RiftManager
                 return;
             }
 
-            Dispatcher.Invoke(() =>
+            Dispatcher.InvokeAsync(() =>
             {
-                var paragraph = new Paragraph();
+                var paragraph = new Paragraph { Margin = new Thickness(0) };
                 var run = new Run($"[{level}] {message}");
 
                 switch (level.ToUpper())
