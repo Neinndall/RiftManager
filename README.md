@@ -1,2 +1,2 @@
 # RiftManager
-RiftMaker es un detector automatico de Eventos de League of Legends, donde podrás scrapear Eventos Normales, Comics and MetaGames.
+RiftMaker is an automatic League of Legends Event detector, where you can scrape Normal Events, Comics and MetaGames.
