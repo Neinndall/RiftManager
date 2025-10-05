@@ -1,0 +1,119 @@
+<Window x:Class="RiftManager.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:RiftManager"
+        xmlns:utils="clr-namespace:RiftManager.Utils"
+        mc:Ignorable="d"
+        Title="RiftManager" Height="720" Width="1280"
+        Background="#1e1e1e">
+    <Window.Resources>
+        
+    </Window.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Background="#2d2d2d" Height="50">
+            <Button Content="Riot Manifests" Style="{StaticResource ModernButton}" Click="DownloadRiotManifests_Click" HorizontalAlignment="Left" VerticalAlignment="Center" Width="120" Height="30" Margin="10,0,0,0"/>
+        </Grid>
+
+        <Grid Grid.Row="1" Margin="10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="400"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Columna Izquierda: Lista de Eventos -->
+            <ListView Name="EventsListView" Grid.Column="0" Background="Transparent" BorderBrush="#444" BorderThickness="1" SelectionChanged="EventsListView_SelectionChanged">
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Header="List of Events" Width="350">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock VerticalAlignment="Center" Foreground="White" TextWrapping="Wrap"
+                                               Text="{Binding Title}"/>
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                    </GridView>
+                </ListView.View>
+            </ListView>
+
+            <!-- Columna Derecha: Detalles y Log -->
+            <Grid Grid.Column="1" Margin="10,0,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Panel de Detalles del Evento Seleccionado -->
+                <StackPanel Name="EventDetailsPanel" Grid.Row="0" Visibility="Collapsed">
+                    <Border CornerRadius="5" Margin="0,0,0,10">
+                        <Border.Background>
+                            <ImageBrush x:Name="EventBackgroundBrush" Stretch="UniformToFill"/>
+                        </Border.Background>
+                        <Grid Height="200">
+                            <Grid.Background>
+                                <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                    <GradientStop Color="#00000000" Offset="0"/>
+                                    <GradientStop Color="#e51e1e1e" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Grid.Background>
+                            <TextBlock x:Name="EventTitleTextBlock" Text="Event Title" FontSize="24" FontWeight="Bold" Foreground="White" VerticalAlignment="Bottom" Margin="15"/>
+                        </Grid>
+                    </Border>
+                    
+                    <!-- Detalles adicionales del evento -->
+                    <Grid Margin="15,0,15,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="ID:" Foreground="#AAAAAA" Margin="0,0,5,0"/>
+                        <TextBlock x:Name="EventIdTextBlock" Grid.Row="0" Grid.Column="1" Text="{Binding NavigationItemId}" Foreground="White"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Tipo:" Foreground="#AAAAAA" Margin="0,5,5,0"/>
+                        <TextBlock x:Name="EventTypeTextBlock" Grid.Row="1" Grid.Column="1" Text="N/A" Foreground="White" Margin="0,5,0,0"/>
+
+                        <TextBlock x:Name="MainLinksHeader" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Text="Enlaces Principales:" Foreground="#AAAAAA" Margin="0,10,0,5" Visibility="Collapsed"/>
+                        <ItemsControl x:Name="MainEventLinksList" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,0" Visibility="Collapsed">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock>
+                                        <Run Text="- " Foreground="White"/>
+                                        <Run Text="{Binding Title}" FontWeight="SemiBold" Foreground="LightBlue"/>
+                                        <Run Text=" (" Foreground="White"/>
+                                        <Run Text="{Binding Url}" FontStyle="Italic" Foreground="#CCCCCC"/>
+                                        <Run Text=")"/>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+
+                    <Button Name="DownloadEventButton" Content="Download Event Assets" Style="{StaticResource ModernButton}" Click="DownloadButton_Click" Margin="15,0,15,10"/>
+                </StackPanel>
+
+                <!-- Visor de Logs -->
+                <RichTextBox Name="LogRichTextBox" Grid.Row="1" Background="#252526" Foreground="#ccc" BorderBrush="#444" BorderThickness="1" IsReadOnly="True" VerticalScrollBarVisibility="Auto" FontFamily="Consolas" Padding="5">
+                    <RichTextBox.Resources>
+                        <Style TargetType="{x:Type Paragraph}">
+                            <Setter Property="Margin" Value="0"/>
+                        </Style>
+                    </RichTextBox.Resources>
+                </RichTextBox>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>

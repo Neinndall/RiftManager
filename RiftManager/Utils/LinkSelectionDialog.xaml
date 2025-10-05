@@ -1,0 +1,59 @@
+<Window x:Class="RiftManager.Utils.LinkSelectionDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Select Link" Height="Auto" MaxHeight="600" Width="600"
+        Background="#1e1e1e" Foreground="White"
+        WindowStartupLocation="CenterOwner">
+    <Window.Resources>
+        <!-- Estilo para un botón moderno y oscuro (reutilizado) -->
+        <Style TargetType="Button" x:Key="ModernButton">
+            <Setter Property="Background" Value="#333"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderBrush" Value="#555"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#444"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+    </Window.Resources>
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Multiple main event links found. Please select one:" TextWrapping="Wrap" Margin="0,0,0,10"/>
+        
+        <ItemsControl Name="LinksItemsControl" Grid.Row="1" Margin="0,0,0,10">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Button Style="{StaticResource ModernButton}" Margin="0,5,0,0" Click="LinkButton_Click" HorizontalContentAlignment="Stretch">
+                        <StackPanel Orientation="Vertical" HorizontalAlignment="Stretch">
+                            <TextBlock Text="{Binding Title}" FontWeight="Bold" Foreground="White" TextWrapping="Wrap" HorizontalAlignment="Left"/>
+                            <TextBlock Text="{Binding Url}" FontSize="10" Foreground="#aaa" TextTrimming="CharacterEllipsis" TextWrapping="Wrap" HorizontalAlignment="Left"/>
+                        </StackPanel>
+                    </Button>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Content="Cancel" Width="90" Style="{StaticResource ModernButton}" IsCancel="True"/>
+        </StackPanel>
+    </Grid>
+</Window>
