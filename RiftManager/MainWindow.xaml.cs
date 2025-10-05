@@ -27,12 +27,12 @@ namespace RiftManager
         private Dictionary<string, EventDetails> _allEventData = new Dictionary<string, EventDetails>();
         private EventDetails? _selectedEvent;
 
-        public MainWindow()
+        public MainWindow(LogService logService)
         {
             InitializeComponent();
 
             // --- Service Instantiation ---
-            _logService = new LogService();
+            _logService = logService;
             _logService.OnLogMessage += LogMessageReceived;
 
             // --- Service Dependencies ---
