@@ -25,7 +25,7 @@ namespace RiftManager.Services
         /// Los errores (LogError) siempre se mostrarán, independientemente de este parámetro.
         /// </param>
         /// <returns>Un JsonDocument si la petición es exitosa y el JSON es válido, de lo contrario null.</returns>
-        public async Task<JsonDocument?> GetJsonDocumentAsync(string url, bool suppressConsoleOutput = false)
+        public async Task<JsonDocument> GetJsonDocumentAsync(string url, bool suppressConsoleOutput = false)
         {
             try
             {

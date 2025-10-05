@@ -20,7 +20,7 @@ namespace RiftManager.Interfaces
         /// <summary>
         /// Extrae URLs de assets adicionales de un documento JSON de página de detalle.
         /// </summary>
-        public List<string> ExtractAdditionalAssetsUrls(JsonDocument? eventDetailPageData)
+        public List<string> ExtractAdditionalAssetsUrls(JsonDocument eventDetailPageData)
         {
             List<string> assetUrls = new List<string>();
             if (eventDetailPageData == null)
@@ -41,7 +41,7 @@ namespace RiftManager.Interfaces
                             // AÑADIDO: Si background tiene una propiedad "url" y es de tipo string, es una imagen directa.
                             if (backgroundElement.TryGetProperty("url", out JsonElement backgroundUrlElement) && backgroundUrlElement.ValueKind == JsonValueKind.String)
                             {
-                                string? backgroundImageUrl = backgroundUrlElement.GetString();
+                                string backgroundImageUrl = backgroundUrlElement.GetString();
                                 if (!string.IsNullOrEmpty(backgroundImageUrl))
                                 {
                                     assetUrls.Add(backgroundImageUrl);
@@ -145,7 +145,7 @@ namespace RiftManager.Interfaces
         /// <param name="eventDetailsDocument">El documento JSON de la página de detalle del evento.</param>
         /// <param name="eventDetailsToPopulate">El objeto EventDetails a rellenar con el título.</param>
         /// <returns>Una lista de objetos MainEventLink si se encuentran URLs principales, de lo contrario una lista vacía.</returns>
-        public List<MainEventLink> GetMainEventUrlsFromDetailPage(JsonDocument? eventDetailsDocument, EventDetails eventDetailsToPopulate) // ¡Cambio de retorno!
+        public List<MainEventLink> GetMainEventUrlsFromDetailPage(JsonDocument eventDetailsDocument, EventDetails eventDetailsToPopulate) // ¡Cambio de retorno!
         {
             List<MainEventLink> foundMainEventLinks = new List<MainEventLink>(); // Lista para almacenar todas las URLs encontradas
 
@@ -190,12 +190,12 @@ namespace RiftManager.Interfaces
                                 actionElement.TryGetProperty("payload", out JsonElement payloadElement) && payloadElement.ValueKind == JsonValueKind.Object &&
                                 payloadElement.TryGetProperty("url", out JsonElement urlElement) && urlElement.ValueKind == JsonValueKind.String)
                             {
-                                string? currentUrl = urlElement.GetString();
+                                string currentUrl = urlElement.GetString();
                                 // Es importante verificar si 'metagameId' existe antes de intentar obtenerlo
-                                string? currentMetagameId = payloadElement.TryGetProperty("metagameId", out JsonElement metagameIdElement) && metagameIdElement.ValueKind == JsonValueKind.String
+                                string currentMetagameId = payloadElement.TryGetProperty("metagameId", out JsonElement metagameIdElement) && metagameIdElement.ValueKind == JsonValueKind.String
                                                             ? metagameIdElement.GetString() : null;
                                 // También obtenemos el título del link
-                                string? linkTitle = link.TryGetProperty("title", out JsonElement linkTitleElement) && linkTitleElement.ValueKind == JsonValueKind.String
+                                string linkTitle = link.TryGetProperty("title", out JsonElement linkTitleElement) && linkTitleElement.ValueKind == JsonValueKind.String
                                                     ? linkTitleElement.GetString() : null;
 
                                 if (currentUrl != null && currentUrl.Contains(EmbedUrlIdentifier, StringComparison.OrdinalIgnoreCase))

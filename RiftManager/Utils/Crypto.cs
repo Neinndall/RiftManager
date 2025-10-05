@@ -36,10 +36,6 @@ namespace RiftManager.Utils
         /// <param name="logService">The LogService instance for logging.</param>
         public static void AddMd5HashToFile(string filePath, LogService logService)
         {
-            // No es necesario el if (logService == null) aquí.
-            // El operador ?. se encargará de no invocar el método si logService es null.
-            // En un entorno DI bien configurado, logService NUNCA debería ser null.
-
             try
             {
                 // File.ReadAllText es sincrónico, por lo que no necesitamos 'await' aquí.
@@ -87,25 +83,25 @@ namespace RiftManager.Utils
                     }
 
                     string newFileName = string.Join(".", fileNameArr);
-                    string? existingDirectoryPath = Path.GetDirectoryName(filePath); // Usar string? para nullability
+                    string existingDirectoryPath = Path.GetDirectoryName(filePath); // Usar string? para nullability
 
                     if (!string.IsNullOrEmpty(existingDirectoryPath)) // Comprobación más robusta
                     {
                         string newPath = Path.Combine(existingDirectoryPath, newFileName);
                         File.Move(filePath, newPath); // Mover el archivo a la nueva ubicación
-                        logService?.LogSuccess($"Crypto: Renamed '{existingFileName}' to '{newFileName}'"); // Usar LogService
+                        logService.LogSuccess($"Crypto: Renamed '{existingFileName}' to '{newFileName}'"); // Usar LogService
                     }
                     else
                     {
                         // Si filePath es solo un nombre de archivo sin ruta o la ruta es el directorio actual
                         File.Move(filePath, newFileName);
-                        logService?.LogSuccess($"Crypto: Renamed '{existingFileName}' to '{newFileName}' in current directory."); // Usar LogService
+                        logService.LogSuccess($"Crypto: Renamed '{existingFileName}' to '{newFileName}' in current directory."); // Usar LogService
                     }
                 }
             }
             catch (Exception ex)
             {
-                logService?.LogError($"Crypto: Error while renaming file '{filePath}': {ex.Message}"); // Usar LogService
+                logService.LogError($"Crypto: Error while renaming file '{filePath}': {ex.Message}"); // Usar LogService
             }
         }
     }

@@ -167,7 +167,7 @@ namespace RiftManager.Services
 
                 // Determinar el directorio de exportación manteniendo la estructura de directorios relativa.
                 string assetFileName = Path.GetFileName(assetRelativePath);
-                string? rawAssetFileDirectory = Path.GetDirectoryName(assetRelativePath);
+                string rawAssetFileDirectory = Path.GetDirectoryName(assetRelativePath);
                 string assetFileDirectory = rawAssetFileDirectory == null ? "" : rawAssetFileDirectory.Replace("\\", "/");
                 assetFileDirectory = assetFileDirectory.Replace("_/lib-embed/", "lib-embed/");
                 
@@ -222,7 +222,7 @@ namespace RiftManager.Services
                 _downloadedAssets.Add(normalizedName);
 
                 // --- Lógica para preservar la estructura de directorios ---
-                string? rawBasePath = Path.GetDirectoryName(distURL);
+                string rawBasePath = Path.GetDirectoryName(distURL);
                 string basePath = (rawBasePath ?? string.Empty)
                     .Replace("\\", "/")
                     .Replace("https:/", "https://")
@@ -235,7 +235,7 @@ namespace RiftManager.Services
                     .Replace("_/lib-embed/", "lib-embed/") // Mantengo estas líneas según tu código original
                     .Replace("_next/static/", ""); // Mantengo estas líneas según tu código original
 
-                string? tempDirName = Path.GetDirectoryName(relativePath);
+                string tempDirName = Path.GetDirectoryName(relativePath);
                 string fileDirectory;
                 if (tempDirName == null)
                 {

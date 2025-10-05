@@ -39,7 +39,7 @@ namespace RiftManager.Services
         {
             Dictionary<string, EventDetails> eventData = new Dictionary<string, EventDetails>();
 
-            using JsonDocument? document = await _jsonFetcherService.GetJsonDocumentAsync(navigationUrl, suppressConsoleOutput: true);
+            using JsonDocument document = await _jsonFetcherService.GetJsonDocumentAsync(navigationUrl, suppressConsoleOutput: true);
             if (document == null)
             {
                 _logService.LogWarning("[EventCoordinatorService] No se pudo obtener el documento JSON de navegación. Asegúrate de que la URL sea correcta o haya conexión.");
@@ -58,10 +58,10 @@ namespace RiftManager.Services
 
                         EventDetails currentEvent = new EventDetails(eventTitle, navigationItemId);
 
-                        string? fullCatalogJsonUrl = null;
+                        string fullCatalogJsonUrl = null;
 
                         // 1. Obtener la MainEventUrl del propio elemento de navegación inicial (si es de tipo 'iframed')
-                        string? navMainUrl = _navigationParser.GetMainEventUrlFromNavigationItem(eventElement);
+                        string navMainUrl = _navigationParser.GetMainEventUrlFromNavigationItem(eventElement);
                         if (navMainUrl != null)
                         {
                             currentEvent.MainEventUrl = navMainUrl;
@@ -114,7 +114,7 @@ namespace RiftManager.Services
                         if (requiresDetailPageFetch)
                         {
                             string eventDataUrl = $"{_baseUrlV2}/page/{navigationItemId}";
-                            JsonDocument? eventDetailsDocument = await _jsonFetcherService.GetJsonDocumentAsync(eventDataUrl, suppressConsoleOutput: true);
+                            JsonDocument eventDetailsDocument = await _jsonFetcherService.GetJsonDocumentAsync(eventDataUrl, suppressConsoleOutput: true);
                             if (eventDetailsDocument != null)
                             {
                                 // --- CAMBIO ADICIONAL APLICADO AQUÍ ---
@@ -144,7 +144,7 @@ namespace RiftManager.Services
                                 if (fullCatalogJsonUrl == null && currentEvent.MainEventUrl != null)
                                 {
                                     // Pasa el título del primer MainEventLink si existe, de lo contrario null.
-                                    string? titleForCatalog = currentEvent.MainEventLinks.Any() ? currentEvent.MainEventLinks.First().Title : null;
+                                    string titleForCatalog = currentEvent.MainEventLinks.Any() ? currentEvent.MainEventLinks.First().Title : null;
                                     fullCatalogJsonUrl = await _webScraper.GetCatalogBaseUrl(currentEvent.MainEventUrl, titleForCatalog);
                                     if (fullCatalogJsonUrl != null)
                                     {

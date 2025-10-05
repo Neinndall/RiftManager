@@ -27,7 +27,7 @@ namespace RiftManager.Interfaces
         /// <param name="assetBaseUrl">La URL base para construir las URLs completas de los bundles.</param>
         /// <param name="metagameId">ID de metajuego opcional para filtrar bundles.</param>
         /// <returns>Una lista de URLs de bundles.</returns>
-        public List<string> ParseBundleUrlsFromCatalogJson(JsonDocument document, string assetBaseUrl, string? metagameId = null)
+        public List<string> ParseBundleUrlsFromCatalogJson(JsonDocument document, string assetBaseUrl, string metagameId = null)
         {
             _logService.LogDebug($"CatalogParser: ParseBundleUrlsFromCatalogJson llamado con Metagame ID: {metagameId ?? "N/A"}");
             List<string> bundleUrls = new List<string>();
@@ -42,7 +42,7 @@ namespace RiftManager.Interfaces
             {
                 foreach (JsonElement idElement in internalIdsElement.EnumerateArray())
                 {
-                    string? internalPath = idElement.GetString();
+                    string internalPath = idElement.GetString();
                     if (string.IsNullOrEmpty(internalPath)) continue;
 
                     string fullBundleUrl;

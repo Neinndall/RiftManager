@@ -16,7 +16,7 @@ namespace RiftManager.Utils
         /// <param name="directory">Path to the directory to clean up</param>
         /// <param name="logService">The LogService instance for logging.</param>
         /// <param name="basePathForLogging">Optional: The base path to make log entries relative to.</param>
-        public static async Task RemoveEmptyDirectories(string directory, LogService logService, string? basePathForLogging = null)
+        public static async Task RemoveEmptyDirectories(string directory, LogService logService, string basePathForLogging = null)
         {
             // Removed explicit null check for logService, relying on ?. operator.
             // In a well-configured DI environment, logService should not be null.

@@ -23,7 +23,7 @@ namespace RiftManager.Services
             string fileName = Path.GetFileName(new Uri(bundleUrl).AbsolutePath);
             string fullDestinationPath = Path.Combine(destinationFolder, fileName);
 
-            string? directory = Path.GetDirectoryName(fullDestinationPath);
+            string directory = Path.GetDirectoryName(fullDestinationPath);
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
             {
                 Directory.CreateDirectory(directory);
@@ -72,7 +72,7 @@ namespace RiftManager.Services
             string fileName = Path.GetFileName(new Uri(assetUrl).AbsolutePath);
             string fullDestinationPath = Path.Combine(destinationFolder, fileName);
 
-            string? directory = Path.GetDirectoryName(fullDestinationPath);
+            string directory = Path.GetDirectoryName(fullDestinationPath);
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
             {
                 Directory.CreateDirectory(directory);
@@ -125,7 +125,7 @@ namespace RiftManager.Services
             string fileName = Path.GetFileName(new Uri(distUrl).AbsolutePath);
             string fullDestinationPath = Path.Combine(destinationFolder, fileName);
 
-            string? directory = Path.GetDirectoryName(fullDestinationPath);
+            string directory = Path.GetDirectoryName(fullDestinationPath);
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
             {
                 Directory.CreateDirectory(directory);
@@ -179,7 +179,7 @@ namespace RiftManager.Services
             string fileName = Path.GetFileName(new Uri(assetUrl).AbsolutePath);
             string fullDestinationPath = Path.Combine(destinationDirectoryForGame, fileName);
 
-            string? directory = Path.GetDirectoryName(fullDestinationPath);
+            string directory = Path.GetDirectoryName(fullDestinationPath);
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
             {
                 Directory.CreateDirectory(directory);
@@ -220,7 +220,7 @@ namespace RiftManager.Services
             string fileName = Path.GetFileName(new Uri(audioUrl).AbsolutePath);
             string fullDestinationPath = Path.Combine(audioSavePath, fileName);
 
-            string? directory = Path.GetDirectoryName(fullDestinationPath);
+            string directory = Path.GetDirectoryName(fullDestinationPath);
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
             {
                 Directory.CreateDirectory(directory);

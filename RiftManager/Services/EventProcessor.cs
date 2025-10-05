@@ -37,11 +37,11 @@ namespace RiftManager.Services
         public async Task ProcessEventAsync(
             EventDetails currentEvent,
             string assetsRootFolderPath,
-            MainEventLink? selectedMainEventLink = null)
+            MainEventLink selectedMainEventLink = null)
         {
             // Prepare the main URL for processing, which will be the user's choice or the only existing one.
-            string? urlToProcess = (selectedMainEventLink != null) ? selectedMainEventLink.Url : null;
-            string? metagameIdToProcess = (selectedMainEventLink != null) ? selectedMainEventLink.MetagameId : null;
+            string urlToProcess = (selectedMainEventLink != null) ? selectedMainEventLink.Url : null;
+            string metagameIdToProcess = (selectedMainEventLink != null) ? selectedMainEventLink.MetagameId : null;
 
             // --- START DETAILED LOG FOR THE SELECTED EVENT ---
             _logService.Log($"\n--- Processing Event: {currentEvent.Title} (ID: {currentEvent.NavigationItemId}) ---");

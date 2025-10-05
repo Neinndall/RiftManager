@@ -53,7 +53,7 @@ namespace RiftManager.Services
             _logService.LogDebug($"Procesando manifiesto: {manifestUrl}");
             try
             {
-                using JsonDocument? document = await _jsonFetcherService.GetJsonDocumentAsync(manifestUrl);
+                using JsonDocument document = await _jsonFetcherService.GetJsonDocumentAsync(manifestUrl);
                 if (document == null)
                 {
                     _logService.LogWarning($"No se pudo obtener el manifiesto: {manifestUrl}");

@@ -48,7 +48,7 @@ namespace RiftManager.Interfaces
         /// <param name="eventUrl">La URL del evento a scrapear.</param>
         /// <param name="linkTitle">El título del link principal del evento, usado para diferenciar tipos de eventos (e.g., cómics vs. metajuegos).</param>
         /// <returns>La URL base del catálogo si se encuentra, de lo contrario null.</returns>
-        public async Task<string?> GetCatalogBaseUrl(string eventUrl, string? linkTitle = null)
+        public async Task<string> GetCatalogBaseUrl(string eventUrl, string linkTitle = null)
         {
             try
             {
@@ -58,11 +58,11 @@ namespace RiftManager.Interfaces
                 doc.LoadHtml(html);
 
                 // Busca el elemento <link> con rel="preload", as="font" y que contenga "woff2"
-                HtmlNode? linkNode = doc.DocumentNode.SelectSingleNode("//link[@rel='preload' and @as='font' and contains(@href, 'woff2')]");
+                HtmlNode linkNode = doc.DocumentNode.SelectSingleNode("//link[@rel='preload' and @as='font' and contains(@href, 'woff2')]");
 
                 if (linkNode != null)
                 {
-                    string? href = linkNode.GetAttributeValue("href", string.Empty);
+                    string href = linkNode.GetAttributeValue("href", string.Empty);
                     if (!string.IsNullOrEmpty(href))
                     {
                         // 1. Extrae la parte de la URL que necesitas.
@@ -103,7 +103,7 @@ namespace RiftManager.Interfaces
         /// </summary>
         /// <param name="linkTitle">El título del link del evento.</param>
         /// <returns>El sufijo del path para el catalog.json.</returns>
-        private string GetCatalogJsonPathSuffix(string? linkTitle)
+        private string GetCatalogJsonPathSuffix(string linkTitle)
         {
             if (linkTitle != null && (linkTitle.Contains("play", StringComparison.OrdinalIgnoreCase) || linkTitle.Contains("minigame", StringComparison.OrdinalIgnoreCase)))
             {

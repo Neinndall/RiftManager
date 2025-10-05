@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
@@ -12,7 +11,6 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using RiftManager.Services;
 using RiftManager.Models;
-using RiftManager.Interfaces;
 using RiftManager.Utils;
 
 namespace RiftManager
@@ -23,37 +21,21 @@ namespace RiftManager
         private readonly EventProcessor _eventProcessor;
         private readonly RiotClientManifestService _riotClientManifestService;
         private readonly LogService _logService;
-        private static readonly HttpClient _httpClient = new HttpClient(); // Reutilizar HttpClient
         private Dictionary<string, EventDetails> _allEventData = new Dictionary<string, EventDetails>();
-        private EventDetails? _selectedEvent;
+        private EventDetails _selectedEvent;
 
-        public MainWindow(LogService logService)
+        public MainWindow(LogService logService, EventCoordinatorService eventService, EventProcessor eventProcessor, RiotClientManifestService riotClientManifestService)
         {
             InitializeComponent();
 
-            // --- Service Instantiation ---
+            // Initialize fields from injected services
             _logService = logService;
+            _eventService = eventService;
+            _eventProcessor = eventProcessor;
+            _riotClientManifestService = riotClientManifestService;
+
+            // Subscribe to log messages for the UI
             _logService.OnLogMessage += LogMessageReceived;
-
-            // --- Service Dependencies ---
-            NavigationParser navigationParser = new NavigationParser();
-            DetailPageParser detailPageParser = new DetailPageParser(_logService);
-            CatalogParser catalogParser = new CatalogParser(_logService);
-            JsonFetcherService jsonFetcherService = new JsonFetcherService(_httpClient, _logService);
-            WebScraper webScraper = new WebScraper(_httpClient, _logService);
-            AssetDownloader assetDownloader = new AssetDownloader(_httpClient, _logService);
-            BundleService bundleService = new BundleService(jsonFetcherService, _logService, catalogParser);
-            RiotAudioLoader riotAudioLoader = new RiotAudioLoader(jsonFetcherService, _logService, assetDownloader);
-            _riotClientManifestService = new RiotClientManifestService(jsonFetcherService, _logService, assetDownloader);
-            EmbedAssetScraperService embedAssetScraperService = new EmbedAssetScraperService(_httpClient, assetDownloader, _logService, webScraper);
-
-            _eventService = new EventCoordinatorService(
-                jsonFetcherService, navigationParser, detailPageParser, webScraper, bundleService, _logService
-            );
-
-            _eventProcessor = new EventProcessor(
-                assetDownloader, _logService, bundleService, riotAudioLoader, embedAssetScraperService
-            );
 
             Loaded += MainWindow_Loaded;
         }
@@ -135,7 +117,7 @@ namespace RiftManager
                     _logService.LogDebug($"DownloadButton_Click: Iniciando descarga para el evento: {eventDetails.Title}");
                     string assetsFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets");
                     
-                    MainEventLink? selectedLink = null;
+                    MainEventLink selectedLink = null;
 
                     if (eventDetails.MainEventLinks != null && eventDetails.MainEventLinks.Count > 1)
                     {
@@ -293,7 +275,7 @@ namespace RiftManager
             // This is experimental and might not work for all URLs
             string highResUrl = Regex.Replace(originalUrl, "_tn.jpg", ".jpg", RegexOptions.IgnoreCase);
             // You could add more rules here, e.g., for query parameters like ?width=300
-            // highResUrl = Regex.Replace(highResUrl, "\?width=[^&]*", "", RegexOptions.IgnoreCase);
+            // highResUrl = Regex.Replace(highResUrl, "\\?width=[^&]*", "", RegexOptions.IgnoreCase);
             _logService.LogDebug($"GetHighResolutionUrl: URL de alta resolución resultante: {highResUrl}");
             return highResUrl;
         }
@@ -301,16 +283,15 @@ namespace RiftManager
         private void ToolsButton_Click(object sender, RoutedEventArgs e)
         {
             _logService.LogDebug("ToolsButton_Click: Botón Herramientas clickeado. Mostrando menú contextual.");
-
             ContextMenu cm = new ContextMenu();
 
             MenuItem downloadManifestsMenuItem = new MenuItem();
-            downloadManifestsMenuItem.Header = "Descargar Riot Manifests";
+            downloadManifestsMenuItem.Header = "Download Riot Manifests";
             downloadManifestsMenuItem.Click += DownloadRiotManifests_Click;
             cm.Items.Add(downloadManifestsMenuItem);
 
             // Attach the ContextMenu to the button that was clicked
-            Button? clickedButton = sender as Button;
+            Button clickedButton = sender as Button;
             if (clickedButton != null)
             {
                 clickedButton.ContextMenu = cm;

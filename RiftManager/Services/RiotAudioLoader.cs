@@ -58,7 +58,7 @@ namespace RiftManager.Services
                         {
                             if (root.TryGetProperty("letteringSfx", out var letteringSfx) && letteringSfx.TryGetProperty("clipName", out var clipNameElement))
                             {
-                                string? clipName = clipNameElement.GetString();
+                                string clipName = clipNameElement.GetString();
                                 if (!string.IsNullOrEmpty(clipName))
                                 {
                                     letteringAudioUrls.Add($"{cleanBaseUrl}/AudioLocales/en_US/{clipName}.ogg");
@@ -69,7 +69,7 @@ namespace RiftManager.Services
                         {
                             if (root.TryGetProperty("panelSfx", out var panelSfx) && panelSfx.TryGetProperty("clipName", out var panelClipNameElement))
                             {
-                                string? clipName = panelClipNameElement.GetString();
+                                string clipName = panelClipNameElement.GetString();
                                 if (!string.IsNullOrEmpty(clipName))
                                 {
                                     panelAudioUrls.Add($"{cleanBaseUrl}/SoundFX/{clipName}.ogg");
@@ -82,7 +82,7 @@ namespace RiftManager.Services
                                 {
                                     if (audioEvent.TryGetProperty("clipName", out var eventClipNameElement))
                                     {
-                                        string? clipName = eventClipNameElement.GetString();
+                                        string clipName = eventClipNameElement.GetString();
                                         if (!string.IsNullOrEmpty(clipName))
                                         {
                                             panelAudioUrls.Add($"{cleanBaseUrl}/SoundFX/{clipName}.ogg");

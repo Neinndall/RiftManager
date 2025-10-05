@@ -7,7 +7,7 @@ namespace RiftManager.Utils
 {
     public partial class LinkSelectionDialog : Window
     {
-        public MainEventLink? SelectedLink { get; private set; }
+        public MainEventLink SelectedLink { get; private set; }
 
         public LinkSelectionDialog(List<MainEventLink> links, string eventTitle)
         {

@@ -14,9 +14,9 @@ namespace RiftManager.Utils
         /// </summary>
         /// <param name="ob">The nested dictionary to flatten.</param>
         /// <returns>A flattened dictionary.</returns>
-        public static Dictionary<string, object?> FlattenObject(JObject ob)
+        public static Dictionary<string, object> FlattenObject(JObject ob)
         {
-            var result = new Dictionary<string, object?>();
+            var result = new Dictionary<string, object>();
 
             foreach (var property in ob.Properties())
             {
@@ -42,7 +42,7 @@ namespace RiftManager.Utils
         public static string NormalizeAssetName(string url)
         {
             // Obtener el nombre del archivo (ej. "preview-immortalized.webm")
-            string? fileName = Path.GetFileName(url);
+            string fileName = Path.GetFileName(url);
 
             // Regex para eliminar SOLO el hash (ej. .d4eac4) si está presente, antes de la extensión.
             // Asegurarse de no eliminar sufijos descriptivos como -immortalized o -pass.

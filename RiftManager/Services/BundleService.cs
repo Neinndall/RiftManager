@@ -28,7 +28,7 @@ namespace RiftManager.Services
             _catalogParser = catalogParser ?? throw new ArgumentNullException(nameof(catalogParser));
         }
         
-        public async Task<List<string>> GetBundleUrlsFromCatalog(string catalogJsonUrl, string assetBaseUrl, string? metagameId = null)
+        public async Task<List<string>> GetBundleUrlsFromCatalog(string catalogJsonUrl, string assetBaseUrl, string metagameId = null)
         {
             List<string> bundleUrls = new List<string>();
 
@@ -68,7 +68,7 @@ namespace RiftManager.Services
 
                 // Paso 2: Extraer bintojson.exe del recurso embebido
                 var assembly = Assembly.GetExecutingAssembly();
-                using (Stream? stream = assembly.GetManifestResourceStream("RiftManager.Resources.bintojson.exe"))
+                using (Stream stream = assembly.GetManifestResourceStream("RiftManager.Resources.bintojson.exe"))
                 {
                     if (stream == null)
                     {

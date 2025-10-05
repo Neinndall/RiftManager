@@ -13,13 +13,13 @@ namespace RiftManager.Interfaces
         /// </summary>
         /// <param name="eventElement">El elemento JSON del evento de la navegación inicial.</param>
         /// <returns>La URL principal si se encuentra y contiene el identificador de embed.rgpub.io, de lo contrario null.</returns>
-        public string? GetMainEventUrlFromNavigationItem(JsonElement eventElement)
+        public string GetMainEventUrlFromNavigationItem(JsonElement eventElement)
         {
             if (eventElement.TryGetProperty("action", out JsonElement actionElement) && actionElement.ValueKind == JsonValueKind.Object
                 && actionElement.TryGetProperty("payload", out JsonElement payloadElement) && payloadElement.ValueKind == JsonValueKind.Object
                 && payloadElement.TryGetProperty("url", out JsonElement urlElement) && urlElement.ValueKind == JsonValueKind.String)
             {
-                string? url = urlElement.GetString();
+                string url = urlElement.GetString();
                 if (url != null && url.Contains(EmbedUrlIdentifier, StringComparison.OrdinalIgnoreCase))
                 {
                     return url;

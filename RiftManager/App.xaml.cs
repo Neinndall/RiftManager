@@ -1,58 +1,82 @@
 using System;
+using System.Net.Http;
 using System.Windows;
-using System.Windows.Threading;
+using Microsoft.Extensions.DependencyInjection;
+using RiftManager.Interfaces;
 using RiftManager.Services;
 
 namespace RiftManager
 {
     public partial class App : Application
     {
-        public static LogService LogService { get; private set; }
+        public static IServiceProvider ServiceProvider { get; private set; }
+
+        public App()
+        {
+            ServiceProvider = ConfigureServices();
+        }
+
+        private IServiceProvider ConfigureServices()
+        {
+            var services = new ServiceCollection();
+
+            // Add services to the container
+            services.AddSingleton<LogService>();
+            services.AddSingleton<HttpClient>();
+
+            // Services with interfaces or specific logic
+            services.AddTransient<NavigationParser>();
+            services.AddTransient<DetailPageParser>();
+            services.AddTransient<CatalogParser>();
+            services.AddTransient<JsonFetcherService>();
+            services.AddTransient<WebScraper>();
+            services.AddTransient<AssetDownloader>();
+            services.AddTransient<BundleService>();
+            services.AddTransient<RiotAudioLoader>();
+            services.AddTransient<RiotClientManifestService>();
+            services.AddTransient<EmbedAssetScraperService>();
+            services.AddTransient<EventCoordinatorService>();
+            services.AddTransient<EventProcessor>();
+
+            // Register MainWindow
+            services.AddTransient<MainWindow>();
+
+            return services.BuildServiceProvider();
+        }
 
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
 
-            // Inicializar el LogService aquí para que esté disponible globalmente
-            LogService = new LogService();
-            LogService.Log("Application started.");
+            var logService = ServiceProvider.GetRequiredService<LogService>();
+            logService.Log("Application starting up.");
 
-            // Manejar excepciones no controladas en todos los hilos de la aplicación
-            AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+            // Setup global exception handlers
+            AppDomain.CurrentDomain.UnhandledException += (sender, args) => LogUnhandledException(ServiceProvider.GetRequiredService<LogService>(), (Exception)args.ExceptionObject, "AppDomain");
+            
+            this.DispatcherUnhandledException += (sender, args) => 
+            {
+                LogUnhandledException(ServiceProvider.GetRequiredService<LogService>(), args.Exception, "Dispatcher");
+                args.Handled = true; // Prevent application crash
+            };
 
-            // Manejar excepciones no controladas en el hilo de la UI
-            this.DispatcherUnhandledException += App_DispatcherUnhandledException;
-
-            // Crear y mostrar la ventana principal manualmente
-            var mainWindow = new MainWindow(LogService);
+            var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
             mainWindow.Show();
         }
 
-        private void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+        private void LogUnhandledException(LogService logger, Exception ex, string context)
         {
-            Exception ex = (Exception)e.ExceptionObject;
-            LogService?.LogError($"[CRITICAL UNHANDLED EXCEPTION - AppDomain] Message: {ex.Message}\nStackTrace: {ex.StackTrace}");
-            // Opcional: Mostrar un MessageBox al usuario
-            MessageBox.Show($"An unhandled application error occurred: {ex.Message}\nSee application.log for details.", "Application Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            Environment.Exit(1); // Terminar la aplicación
-        }
-
-        private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
-        {
-            Exception ex = e.Exception;
-            LogService?.LogError($"[CRITICAL UNHANDLED EXCEPTION - Dispatcher] Message: {ex.Message}\nStackTrace: {ex.StackTrace}");
-            // Marcar la excepción como manejada para evitar que la aplicación se cierre inmediatamente
-            // Esto permite que el log se escriba antes de que la aplicación se cierre (si se cierra)
-            e.Handled = true; 
-            // Opcional: Mostrar un MessageBox al usuario
-            MessageBox.Show($"An unhandled UI error occurred: {ex.Message}\nSee application.log for details.", "UI Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            Environment.Exit(1); // Terminar la aplicación
+            logger.LogError($"[CRITICAL UNHANDLED EXCEPTION - {context}] Message: {ex.Message}\nStackTrace: {ex.StackTrace}");
+            MessageBox.Show($"An unhandled application error occurred in {context}: {ex.Message}\nSee application.log for details.", "Application Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            Environment.Exit(1); // Forcefully terminate
         }
 
         protected override void OnExit(ExitEventArgs e)
         {
-            LogService?.Log("Application exiting.");
-            LogService?.Dispose(); // Asegurarse de liberar recursos del log
+            var logService = ServiceProvider?.GetService<LogService>();
+            logService?.Log("Application exiting.");
+            logService?.Dispose(); // Ensure logs are flushed and resources released
+
             base.OnExit(e);
         }
     }

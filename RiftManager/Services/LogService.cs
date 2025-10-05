@@ -6,9 +6,9 @@ namespace RiftManager.Services
     public class LogService : IDisposable
     {
         private readonly string _logFilePath;
-        private StreamWriter? _logFileWriter;
+        private StreamWriter _logFileWriter;
 
-        public event Action<string, string>? OnLogMessage; // Level, Message
+        public event Action<string, string> OnLogMessage; // Level, Message
 
         public LogService()
         {
