@@ -37,8 +37,41 @@ namespace RiftManager
 
             // Subscribe to log messages for the UI
             _logService.OnLogMessage += LogMessageReceived;
+            _logService.OnLogInteractiveSuccess += LogInteractiveSuccessReceived;
 
             Loaded += MainWindow_Loaded;
+        }
+
+        private void LogInteractiveSuccessReceived(string preLinkText, string linkText, string path)
+        {
+            Dispatcher.InvokeAsync(() =>
+            {
+                var paragraph = new Paragraph { Margin = new Thickness(0) };
+                var run = new Run($"[SUCCESS] {preLinkText}");
+                run.Foreground = Brushes.LightGreen;
+                paragraph.Inlines.Add(run);
+
+                var hyperlink = new Hyperlink(new Run(linkText));
+                hyperlink.NavigateUri = new Uri(path);
+                hyperlink.RequestNavigate += (s, e) =>
+                {
+                    try
+                    {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+                        e.Handled = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logService.LogError($"Failed to open directory: {ex.Message}");
+                    }
+                };
+                hyperlink.Foreground = Brushes.LightBlue;
+
+                paragraph.Inlines.Add(hyperlink);
+
+                LogRichTextBox.Document.Blocks.Add(paragraph);
+                LogRichTextBox.ScrollToEnd();
+            });
         }
 
         private void LogMessageReceived(string level, string message)
@@ -154,7 +187,8 @@ namespace RiftManager
                         _logService.LogDebug($"DownloadButton_Click: Eliminando directorios vacíos en {assetsFolderPath}");
                         await FileSystemHelper.RemoveEmptyDirectories(assetsFolderPath, _logService, baseDirForRelativePath);
 
-                        _logService.LogSuccess($"Download finished for event: {eventDetails.Title}");
+                        string eventAssetsFolderPath = Path.Combine(assetsFolderPath, eventDetails.NavigationItemId);
+                        _logService.LogInteractiveSuccess($"Download finished for event: ", eventDetails.Title, eventAssetsFolderPath);
                         _logService.LogDebug($"DownloadButton_Click: Descarga completada para el evento: {eventDetails.Title}");
                     }
                     else

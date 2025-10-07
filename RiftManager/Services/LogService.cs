@@ -9,6 +9,7 @@ namespace RiftManager.Services
         private StreamWriter _logFileWriter;
 
         public event Action<string, string> OnLogMessage; // Level, Message
+        public event Action<string, string, string> OnLogInteractiveSuccess; // Pre-text, link-text, path
 
         public LogService()
         {
@@ -27,12 +28,10 @@ namespace RiftManager.Services
             }
         }
 
-        private void WriteLogEntry(string level, string message)
+        private void WriteToFile(string level, string message)
         {
             string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
             string formattedMessage = $"[{level}] {message}";
-
-            OnLogMessage?.Invoke(level, message);
 
             if (_logFileWriter != null)
             {
@@ -47,11 +46,24 @@ namespace RiftManager.Services
             }
         }
 
+        private void WriteLogEntry(string level, string message)
+        {
+            WriteToFile(level, message);
+            OnLogMessage?.Invoke(level, message);
+        }
+
         public void Log(string message) => WriteLogEntry("INFO", message);
         public void LogWarning(string message) => WriteLogEntry("WARNING", message);
         public void LogError(string message) => WriteLogEntry("ERROR", message);
         public void LogSuccess(string message) => WriteLogEntry("SUCCESS", message);
         public void LogDebug(string message) => WriteLogEntry("DEBUG", message);
+
+        public void LogInteractiveSuccess(string preLinkText, string linkText, string path)
+        {
+            string message = $"{preLinkText}{linkText}";
+            WriteToFile("SUCCESS", message);
+            OnLogInteractiveSuccess?.Invoke(preLinkText, linkText, path);
+        }
 
         public void Dispose()
         {
