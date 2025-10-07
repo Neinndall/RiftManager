@@ -11,6 +11,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using RiftManager.Services;
 using RiftManager.Models;
+using RiftManager.Dialogs;
 using RiftManager.Utils;
 
 namespace RiftManager

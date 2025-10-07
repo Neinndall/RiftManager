@@ -33,7 +33,7 @@ namespace RiftManager.Services
                 // Solo loguea el inicio de la obtención si suppressConsoleOutput es false
                 if (!suppressConsoleOutput)
                 {
-                    _logService.LogDebug($"JsonFetcherService: Obteniendo datos desde: {url}");
+                    _logService.LogDebug($"JsonFetcherService: Getting data from: {url}");
                 }
 
                 HttpResponseMessage response = await _httpClient.GetAsync(url);
@@ -43,7 +43,7 @@ namespace RiftManager.Services
                 // Solo loguea el éxito de la obtención si suppressConsoleOutput es false
                 if (!suppressConsoleOutput)
                 {
-                    _logService.LogDebug("JsonFetcherService: Datos obtenidos exitosamente.");
+                    _logService.LogDebug("JsonFetcherService: Data obtained successfully.");
                 }
                 return JToken.Parse(jsonResponse);
             }
@@ -51,19 +51,19 @@ namespace RiftManager.Services
             {
                 // Los errores son CRÍTICOS y siempre deben ser logueados,
                 // independientemente del parámetro suppressConsoleOutput.
-                _logService.LogError($"JsonFetcherService: Error HTTP al obtener datos desde {url}: {e.Message}");
+                _logService.LogError($"JsonFetcherService: HTTP error when getting data from {url}: {e.Message}");
                 return null;
             }
             catch (JsonException e)
             {
                 // Los errores son CRÍTICOS y siempre deben ser logueados.
-                _logService.LogError($"JsonFetcherService: Error al parsear JSON desde {url}: {e.Message}");
+                _logService.LogError($"JsonFetcherService: Error parsing JSON from {url}: {e.Message}");
                 return null;
             }
             catch (Exception e)
             {
                 // Los errores son CRÍTICOS y siempre deben ser logueados.
-                _logService.LogError($"JsonFetcherService: Un error inesperado ocurrió al obtener datos desde {url}: {e.Message}");
+                _logService.LogError($"JsonFetcherService: An unexpected error occurred while retrieving data from {url}: {e.Message}");
                 return null;
             }
         }

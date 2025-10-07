@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 using RiftManager.Models;
 using RiftManager.Interfaces;
 using RiftManager.Services;
-using Newtonsoft.Json.Linq;
 
 namespace RiftManager.Services
 {
@@ -27,12 +27,12 @@ namespace RiftManager.Services
             BundleService bundleService,
             LogService logService)
         {
-            _jsonFetcherService = jsonFetcherService ?? throw new ArgumentNullException(nameof(jsonFetcherService));
-            _navigationParser = NavigationParser ?? throw new ArgumentNullException(nameof(NavigationParser));
-            _detailPageParser = DetailPageParser ?? throw new ArgumentNullException(nameof(DetailPageParser));
-            _webScraper = WebScraper ?? throw new ArgumentNullException(nameof(WebScraper));
-            _bundleService = bundleService ?? throw new ArgumentNullException(nameof(bundleService));
-            _logService = logService ?? throw new ArgumentNullException(nameof(logService));
+            _jsonFetcherService = jsonFetcherService;
+            _navigationParser = NavigationParser;
+            _detailPageParser = DetailPageParser;
+            _webScraper = WebScraper;
+            _bundleService = bundleService;
+            _logService = logService;
         }
 
         public async Task<Dictionary<string, EventDetails>> TrackEvents(string navigationUrl)
@@ -42,7 +42,7 @@ namespace RiftManager.Services
             JToken document = await _jsonFetcherService.GetJTokenAsync(navigationUrl, suppressConsoleOutput: true);
             if (document == null)
             {
-                _logService.LogWarning("[EventCoordinatorService] No se pudo obtener el documento JSON de navegación. Asegúrate de que la URL sea correcta o haya conexión.");
+                _logService.LogWarning("[EventCoordinatorService] The navigation JSON document could not be retrieved. Please ensure the URL is correct or there is a connection.");
                 return eventData;
             }
 
@@ -67,14 +67,12 @@ namespace RiftManager.Services
                             currentEvent.MainEventUrl = navMainUrl;
                             currentEvent.HasMainEmbedUrl = true;
 
-                            // --- CAMBIO APLICADO AQUÍ ---
                             // Añade la URL principal encontrada en la navegación a la lista MainEventLinks.
                             currentEvent.MainEventLinks.Add(new MainEventLink(navMainUrl)
                             {
                                 Title = eventTitle, // Usa el título del evento como título predeterminado
                                 MetagameId = null // No hay MetagameId en este nivel de la navegación
                             });
-                            // ----------------------------
 
                             fullCatalogJsonUrl = await _webScraper.GetCatalogBaseUrl(currentEvent.MainEventUrl, eventTitle);
                             if (fullCatalogJsonUrl != null)
@@ -108,7 +106,6 @@ namespace RiftManager.Services
                             JToken eventDetailsToken = await _jsonFetcherService.GetJTokenAsync(eventDataUrl, suppressConsoleOutput: true);
                             if (eventDetailsToken != null)
                             {
-                                // --- CAMBIO ADICIONAL APLICADO AQUÍ ---
                                 // Asegúrate de que DetailPageParser SIEMPRE se llame para buscar enlaces adicionales,
                                 // sin importar si ya encontramos uno en la navegación inicial.
                                 List<MainEventLink> detailPageMainLinks = _detailPageParser.GetMainEventUrlsFromDetailPage(eventDetailsToken, currentEvent);
@@ -121,7 +118,6 @@ namespace RiftManager.Services
                                         currentEvent.MainEventLinks.Add(link);
                                     }
                                 }
-                                // -------------------------------------
 
                                 // Si después de ambos chequeos (navegación y detalle) hay enlaces, actualiza HasMainEmbedUrl
                                 currentEvent.HasMainEmbedUrl = currentEvent.MainEventLinks.Any();
@@ -158,7 +154,7 @@ namespace RiftManager.Services
             }
             else
             {
-                _logService.LogWarning("[EventCoordinatorService] El documento JSON de navegación no contiene la propiedad 'data' como un array. No se pudieron cargar los eventos.");
+                _logService.LogWarning("[EventCoordinatorService] The navigation JSON document does not contain the 'data' property as an array. Events could not be loaded.");
             }
             return eventData;
         }

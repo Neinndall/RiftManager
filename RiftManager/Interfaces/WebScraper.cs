@@ -1,19 +1,12 @@
 ﻿using HtmlAgilityPack;
 using System;
 using System.Net.Http;
-using System.Text.RegularExpressions; // Still needed if you use Regex elsewhere or plan to.
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using RiftManager.Services; // Ensure this is correct for your LogService
+using RiftManager.Services;
 
 namespace RiftManager.Interfaces
 {
-    // Cambié el namespace a Services, ya que es un servicio, no solo una interfaz.
-    // Si tienes una interfaz IWebScraper, entonces esta clase debería estar en Services
-    // e implementar esa interfaz. Por ahora, asumo que es un servicio directo.
-    // Si 'Interfaces' es la carpeta donde están tus servicios, puedes dejarlo así.
-    // Pero por convención, los servicios suelen ir en "Services".
-    // Para mantener la consistencia con el resto de tus archivos, voy a asumir que 'Interfaces'
-    // es donde tienes definidos tus servicios concretos.
     public class WebScraper
     {
         private readonly HttpClient _httpClient;
@@ -21,8 +14,8 @@ namespace RiftManager.Interfaces
 
         public WebScraper(HttpClient httpClient, LogService logService)
         {
-            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-            _logService = logService ?? throw new ArgumentNullException(nameof(logService));
+            _httpClient = httpClient;
+            _logService = logService;
         }
 
         /// <summary>
@@ -34,9 +27,9 @@ namespace RiftManager.Interfaces
         /// <returns>El contenido de la URL como string.</returns>
         public async Task<string> GetContentFromUrl(string url)
         {
-            _logService.LogDebug($"WebScraper: Obteniendo contenido de la URL: {url}");
+            _logService.LogDebug($"WebScraper: Getting content from URL: {url}");
             string content = await _httpClient.GetStringAsync(url);
-            _logService.LogDebug($"WebScraper: Contenido de la URL {url} obtenido.");
+            _logService.LogDebug($"WebScraper: URL content {url} obtained.");
             return content;
         }
 
@@ -87,13 +80,13 @@ namespace RiftManager.Interfaces
             catch (HttpRequestException e)
             {
                 // Este es un error crítico al intentar acceder a la URL, debe ser logueado.
-                _logService.LogError($"WebScraper: Error al obtener el HTML de {eventUrl}: {e.Message}");
+                _logService.LogError($"WebScraper: Error getting HTML from {eventUrl}: {e.Message}");
                 return null;
             }
             catch (Exception e)
             {
                 // Este es un error inesperado durante el procesamiento del HTML, debe ser logueado.
-                _logService.LogError($"WebScraper: Error al procesar el HTML de {eventUrl}: {e.Message}");
+                _logService.LogError($"WebScraper: Error processing HTML from {eventUrl}: {e.Message}");
                 return null;
             }
         }

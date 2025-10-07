@@ -1,5 +1,3 @@
-// RiftManager.Services/EventProcessor.cs
-
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -19,7 +17,6 @@ namespace RiftManager.Services
         private readonly RiotAudioLoader _riotAudioLoader;
         private readonly EmbedAssetScraperService _embedAssetScraperService;
         
-
         public EventProcessor(
             AssetDownloader assetDownloader,
             LogService logService,
@@ -27,11 +24,11 @@ namespace RiftManager.Services
             RiotAudioLoader riotAudioLoader,
             EmbedAssetScraperService embedAssetScraperService)
         {
-            _assetDownloader = assetDownloader ?? throw new ArgumentNullException(nameof(assetDownloader));
-            _logService = logService ?? throw new ArgumentNullException(nameof(logService));
-            _bundleService = bundleService ?? throw new ArgumentNullException(nameof(bundleService));
-            _riotAudioLoader = riotAudioLoader ?? throw new ArgumentNullException(nameof(riotAudioLoader));
-            _embedAssetScraperService = embedAssetScraperService ?? throw new ArgumentNullException(nameof(embedAssetScraperService));
+            _assetDownloader = assetDownloader;
+            _logService = logService;
+            _bundleService = bundleService;
+            _riotAudioLoader = riotAudioLoader;
+            _embedAssetScraperService = embedAssetScraperService;
         }
 
         public async Task ProcessEventAsync(
@@ -75,8 +72,7 @@ namespace RiftManager.Services
                 _logService.Log("Secondary Main URLs: Not available");
             }
 
-            // --- Logic for Bundles and Audios (Events with Catalog) ---
-
+            // Logic for Bundles and Audios (Events with Catalog)
             // Preparamos un ID de filtrado más completo, combinando el Metagame ID y la URL del evento.
             var filterKeywordsList = new List<string>();
             if (!string.IsNullOrEmpty(metagameIdToProcess))
@@ -100,7 +96,7 @@ namespace RiftManager.Services
                 }
             }
             var filterKeywords = string.Join("_", filterKeywordsList.Distinct());
-            _logService.LogDebug($"[EventProcessor] Palabras clave de filtrado combinadas: {filterKeywords}");
+            _logService.LogDebug($"[EventProcessor] Combined filtering keywords: {filterKeywords}");
 
             List<string> fetchedBundleUrls = await _bundleService.GetBundleUrlsFromCatalog(
                     currentEvent.CatalogInformation?.CatalogJsonUrl ?? string.Empty,

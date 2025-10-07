@@ -23,9 +23,9 @@ namespace RiftManager.Services
             LogService logService,
             CatalogParser catalogParser)
         {
-            _jsonFetcherService = jsonFetcherService ?? throw new ArgumentNullException(nameof(jsonFetcherService));
-            _logService = logService ?? throw new ArgumentNullException(nameof(logService));
-            _catalogParser = catalogParser ?? throw new ArgumentNullException(nameof(catalogParser));
+            _jsonFetcherService = jsonFetcherService;
+            _logService = logService;
+            _catalogParser = catalogParser;
         }
         
         public async Task<List<string>> GetBundleUrlsFromCatalog(string catalogJsonUrl, string assetBaseUrl, string metagameId = null)

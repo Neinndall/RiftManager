@@ -29,12 +29,12 @@ namespace RiftManager.Interfaces
         /// <returns>Una lista de URLs de bundles.</returns>
         public List<string> ParseBundleUrlsFromCatalogJson(JToken rootToken, string assetBaseUrl, string metagameId = null)
         {
-            _logService.LogDebug($"CatalogParser: ParseBundleUrlsFromCatalogJson llamado con Metagame ID: {metagameId ?? "N/A"}");
+            _logService.LogDebug($"[CatalogParser] ParseBundleUrlsFromCatalogJson called with Metagame ID: {metagameId ?? "N/A"}");
             List<string> bundleUrls = new List<string>();
 
             if (rootToken == null)
             {
-                _logService.LogWarning("CatalogParser: El token JSON del catálogo es nulo al intentar parsear.");
+                _logService.LogWarning("[CatalogParser] The catalog JSON token is null when attempting to parse.");
                 return bundleUrls;
             }
 
@@ -89,7 +89,7 @@ namespace RiftManager.Interfaces
 
                                 if (!matchFound)
                                 {
-                                    _logService.LogDebug($"CatalogParser: Saltando bundle de cómic '{fileName}' porque no coincide con las palabras clave de contexto: '{metagameId}'.");
+                                    _logService.LogDebug($"[CatalogParser] Avoiding comic bundle '{fileName}' because it does not match the context keywords: '{metagameId}'.");
                                     continue;
                                 }
                             }
@@ -101,7 +101,7 @@ namespace RiftManager.Interfaces
             }
             else
             {
-                _logService.LogError("CatalogParser: El documento JSON del catálogo no contiene la propiedad 'm_InternalIds' como un array. No se pudieron extraer bundles.");
+                _logService.LogError("[CatalogParser] The catalog JSON document does not contain the 'm_InternalIds' property as an array. Bundles could not be extracted.");
             }
 
             return bundleUrls;

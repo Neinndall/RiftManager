@@ -26,14 +26,14 @@ namespace RiftManager.Services
 
         public async Task ProcessAndDownloadAudioUrls(string extractedAssetsPath, string catalogBaseUrl, string audioSavePath)
         {
-            _logService.Log("[RiotAudioLoader] Iniciando nuevo proceso de búsqueda de audios en archivos MotionComic...");
+            _logService.Log("[RiotAudioLoader] Starting a new audio search process in MotionComic files...");
             Directory.CreateDirectory(audioSavePath);
 
             string searchPath = Path.Combine(extractedAssetsPath, "Assets", "Prefabs", "Comics");
 
             if (!Directory.Exists(searchPath))
             {
-                _logService.LogWarning($"[RiotAudioLoader] El directorio específico de cómics no existe: {searchPath}. No se buscarán audios.");
+                _logService.LogWarning($"[RiotAudioLoader] El directorio específico de cómics no existe: {searchPath}.");
                 return;
             }
 
@@ -96,32 +96,32 @@ namespace RiftManager.Services
                     }
                     catch (JsonException jsonEx)
                     {
-                        _logService.LogWarning($"[RiotAudioLoader] Error al parsear el archivo JSON '{fileName}': {jsonEx.Message}. Saltando archivo.");
+                        _logService.LogWarning($"[RiotAudioLoader] Error parsing JSON file '{fileName}': {jsonEx.Message}.");
                     }
                     catch (Exception fileEx)
                     {
-                        _logService.LogError($"[RiotAudioLoader] Error inesperado al procesar el archivo '{fileName}': {fileEx.Message}. Saltando archivo.");
+                        _logService.LogError($"[RiotAudioLoader] Unexpected error while processing file '{fileName}': {fileEx.Message}.");
                     }
                 }
 
                 if (letteringAudioUrls.Any())
                 {
-                    _logService.Log($"[RiotAudioLoader] Audios encontrados en MotionComicLettering: {letteringAudioUrls.Count}");
+                    _logService.Log($"[RiotAudioLoader] Audios found on MotionComicLettering: {letteringAudioUrls.Count}");
                 }
                 if (panelAudioUrls.Any())
                 {
-                    _logService.Log($"[RiotAudioLoader] Audios encontrados en MotionComicPanel: {panelAudioUrls.Count}");
+                    _logService.Log($"[RiotAudioLoader] Audios found in MotionComicPanel: {panelAudioUrls.Count}");
                 }
 
                 var audioUrlsToDownload = new HashSet<string>(letteringAudioUrls.Concat(panelAudioUrls));
 
                 if (!audioUrlsToDownload.Any())
                 {
-                    _logService.Log("[RiotAudioLoader] No se encontraron audios en ningún archivo MotionComic.");
+                    _logService.Log("[RiotAudioLoader] No audio was found in any MotionComic files.");
                     return;
                 }
 
-                _logService.Log($"[RiotAudioLoader] Se encontraron {audioUrlsToDownload.Count} URLs de audio únicas en total. Iniciando descarga...");
+                _logService.Log($"[RiotAudioLoader] Found {audioUrlsToDownload.Count} total unique audio URLs. Starting download...");
 
                 foreach (var audioUrl in audioUrlsToDownload)
                 {
@@ -131,20 +131,20 @@ namespace RiftManager.Services
                     }
                     catch (HttpRequestException httpEx)
                     {
-                        _logService.LogError($"[RiotAudioLoader] Error HTTP ({(int?)httpEx.StatusCode}) al descargar {Path.GetFileName(audioUrl)}: {httpEx.Message}");
+                        _logService.LogError($"[RiotAudioLoader] Error HTTP ({(int?)httpEx.StatusCode}) when downloading {Path.GetFileName(audioUrl)}: {httpEx.Message}");
                     }
                     catch (Exception ex)
                     {
-                        _logService.LogError($"[RiotAudioLoader] Error inesperado al descargar {Path.GetFileName(audioUrl)}: {ex.GetType().Name} - {ex.Message}");
+                        _logService.LogError($"[RiotAudioLoader] Unexpected error while downloading {Path.GetFileName(audioUrl)}: {ex.GetType().Name} - {ex.Message}");
                     }
                     await Task.Delay(100);
                 }
                 
-                _logService.LogSuccess($"[RiotAudioLoader] Proceso de descarga de audios completado.");
+                _logService.LogSuccess($"[RiotAudioLoader] Audio download process completed.");
             }
             catch (Exception ex)
             {
-                _logService.LogError($"[RiotAudioLoader] Error fatal durante la búsqueda de archivos de audio: {ex.Message}");
+                _logService.LogError($"[RiotAudioLoader] Fatal error while searching for audio files: {ex.Message}");
             }
         }
 

@@ -28,7 +28,5 @@ namespace RiftManager.Interfaces
             
             return null;
         }
-
-        // Puedes añadir más métodos aquí si en el futuro necesitas extraer más datos específicos de la navegación.
     }
 }

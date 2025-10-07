@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
-using RiftManager.Models; // Asegúrate de agregar esta directiva using!
-using RiftManager.Services; // Necesario para LogService
+using RiftManager.Models;
+using RiftManager.Services;
 
 namespace RiftManager.Interfaces
 {
@@ -14,7 +14,7 @@ namespace RiftManager.Interfaces
 
         public DetailPageParser(LogService logService)
         {
-            _logService = logService ?? throw new ArgumentNullException(nameof(logService));
+            _logService = logService;
         }
 
         /// <summary>
@@ -166,7 +166,7 @@ namespace RiftManager.Interfaces
 
                                         if (currentUrl != null && currentUrl.Contains(EmbedUrlIdentifier, StringComparison.OrdinalIgnoreCase))
                                         {
-                                            Console.WriteLine($"DEBUG: URL principal de metajuego encontrada: {currentUrl} (MetagameId: {currentMetagameId ?? "N/A"})");
+                                            _logService.LogDebug($"[DetailPageParser] Main metagame URL found: {currentUrl} (MetagameId: {currentMetagameId ?? "N/A"})");
                                             foundMainEventLinks.Add(new MainEventLink(currentUrl)
                                             {
                                                 MetagameId = currentMetagameId,
@@ -182,7 +182,7 @@ namespace RiftManager.Interfaces
             }
             catch (Exception e)
             {
-                _logService.LogError($"DetailPageParser: Error al extraer URLs principales y MetagameId de la página de detalle: {e.Message}");
+                _logService.LogError($"[DetailPageParser] Error extracting main URLs and MetagameId from the detail page: {e.Message}");
             }
 
             // Para mantener la compatibilidad con el EventDetails existente que espera UNA URL principal,

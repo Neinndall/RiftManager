@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using Newtonsoft.Json.Linq; // Necesario para JObject.Parse y FlattenObject
+using Newtonsoft.Json.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using RiftManager.Utils; // Para ObjectHelper y Crypto
+using RiftManager.Utils;
 
 namespace RiftManager.Services
 {
@@ -18,9 +18,9 @@ namespace RiftManager.Services
 
         public RiotClientManifestService(JsonFetcherService jsonFetcherService, LogService logService, AssetDownloader assetDownloader)
         {
-            _jsonFetcherService = jsonFetcherService ?? throw new ArgumentNullException(nameof(jsonFetcherService));
-            _assetDownloader = assetDownloader ?? throw new ArgumentNullException(nameof(assetDownloader));
-            _logService = logService ?? throw new ArgumentNullException(nameof(logService));
+            _jsonFetcherService = jsonFetcherService;
+            _assetDownloader = assetDownloader;
+            _logService = logService;
         }
 
         public async Task ProcessRiotClientManifests(string baseManifestsDownloadDirectory)
@@ -38,23 +38,23 @@ namespace RiftManager.Services
 
             Directory.CreateDirectory(baseManifestsDownloadDirectory);
 
-            _logService.Log("Iniciando procesamiento de Riot Client Manifests...");
+            _logService.Log("Starting processing Riot Client Manifests...");
             foreach (var url in riotClientManifestUrls)
             {
                 await ProcessSingleManifest(url, baseManifestsDownloadDirectory);
             }
-            _logService.LogSuccess("Procesamiento completado.");
+            _logService.LogSuccess("Processing completed.");
         }
 
         private async Task ProcessSingleManifest(string manifestUrl, string baseManifestsDownloadDirectory)
         {
-            _logService.LogDebug($"Procesando manifiesto: {manifestUrl}");
+            _logService.LogDebug($"Processing manifest: {manifestUrl}");
             try
             {
                 JToken document = await _jsonFetcherService.GetJTokenAsync(manifestUrl);
                 if (document == null)
                 {
-                    _logService.LogWarning($"No se pudo obtener el manifiesto: {manifestUrl}");
+                    _logService.LogWarning($"The manifest could not be obtained: {manifestUrl}");
                     return;
                 }
 
@@ -80,7 +80,7 @@ namespace RiftManager.Services
                                     .Where(value => !string.IsNullOrWhiteSpace(value) && IsValidAsset(value))
                                     .ToList();
 
-                _logService.Log($"Encontrados {validAssets.Count} assets válidos en el manifiesto.");
+                _logService.Log($"Found {validAssets.Count} valid assets in the manifest.");
 
                 foreach (var assetPath in validAssets)
                 {
@@ -98,27 +98,27 @@ namespace RiftManager.Services
                     // Asegurarse de que el directorio de destino existe
                     Directory.CreateDirectory(targetDir);
 
-                    _logService.LogDebug($"Intentando descargar: {fullUrl}");
+                    _logService.LogDebug($"Trying to download: {fullUrl}");
 
                     try
                     {
                         // Usar tu AssetDownloader para descargar el archivo
                         await _assetDownloader.DownloadAssetForManifest(fullUrl, targetDir);
-                        _logService.Log($"Descargado: {fullUrl}"); 
+                        _logService.Log($"Downloaded: {fullUrl}"); 
                     }
                     catch (HttpRequestException httpEx) when (httpEx.StatusCode == System.Net.HttpStatusCode.NotFound)
                     {
-                        _logService.LogWarning($"✗ Asset no encontrado (404): {assetPath}");
+                        _logService.LogWarning($"✗ Asset not found: {assetPath}");
                     }
                     catch (Exception ex)
                     {
-                        _logService.LogError($"✗ Error al descargar asset '{assetPath}': {ex.Message}");
+                        _logService.LogError($"✗ Error downloading asset '{assetPath}': {ex.Message}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logService.LogError($"Error procesando manifiesto '{manifestUrl}': {ex.Message}");
+                _logService.LogError($"Error processing manifest '{manifestUrl}': {ex.Message}");
             }
         }
 

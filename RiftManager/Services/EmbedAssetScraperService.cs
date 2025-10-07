@@ -1,6 +1,4 @@
-﻿// RiftManager.Services/EmbedAssetScraperService.cs
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,8 +6,6 @@ using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-
-// Importa tus utilidades
 using RiftManager.Utils;
 using RiftManager.Interfaces;
 
@@ -19,8 +15,8 @@ namespace RiftManager.Services
     {
         private readonly HttpClient _httpClient;
         private readonly AssetDownloader _assetDownloader;
-        private readonly LogService _logService; // Ahora sí, inyectamos tu LogService
-        private readonly WebScraper _webScraper; // Esta instancia ya debería estar inyectada desde el cambio anterior
+        private readonly LogService _logService;
+        private readonly WebScraper _webScraper;
 
         // Almacenar assets ya descargados para evitar repeticion, ahora como campo de instancia
         private readonly HashSet<string> _downloadedAssets = new HashSet<string>();
@@ -35,29 +31,22 @@ namespace RiftManager.Services
             @"^[a-f0-9]{8,}\.css$"    // Para archivos .css como 44939c99c1f6ea56.css
         };
 
-
         public EmbedAssetScraperService(HttpClient httpClient, AssetDownloader assetDownloader, LogService logService, WebScraper webScraper)
         {
-            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-            _assetDownloader = assetDownloader ?? throw new ArgumentNullException(nameof(assetDownloader));
-            _logService = logService ?? throw new ArgumentNullException(nameof(logService)); // Inyectamos LogService
-            _webScraper = webScraper ?? throw new ArgumentNullException(nameof(webScraper));
+            _httpClient = httpClient;
+            _assetDownloader = assetDownloader;
+            _logService = logService; 
+            _webScraper = webScraper;
         }
 
-
         // Check for known main files
-        private void CheckForMainFile(string fileName)
+        private bool IsMainFile(string fileName)
         {
-            bool foundMainFile = KnownMainFiles.Any(file =>
-                                                            fileName.Equals(file) ||
-                                                            fileName.StartsWith(file + ".")) ||
-                                                            KnownMainFilePatterns.Any(pattern =>
-                                                            Regex.IsMatch(fileName, pattern));
-
-            if (!foundMainFile)
-            {
-                throw new Exception("Please provide the dist file.");
-            }
+            return KnownMainFiles.Any(file =>
+                fileName.Equals(file) ||
+                fileName.StartsWith(file + ".")) ||
+                KnownMainFilePatterns.Any(pattern =>
+                Regex.IsMatch(fileName, pattern));
         }
 
         /// <summary>
@@ -295,7 +284,6 @@ namespace RiftManager.Services
                 return; // Si no hay matches, salimos del método.
             }
 
-            // --- CAMBIO PRINCIPAL: Desduplicar las URLs de los assets principales antes de procesarlos ---
             // Creamos un HashSet para almacenar solo URLs únicas de los archivos dist (app.xxxx.js/css).
             HashSet<string> uniqueDistUrls = new HashSet<string>(distMatches.Cast<Match>().Select(m => m.Value));
 
@@ -308,7 +296,10 @@ namespace RiftManager.Services
                 string fileName = (Path.GetFileName(distURL) ?? string.Empty).Split('?')[0];
 
                 _logService.Log($"Validating main file: {fileName}");
-                CheckForMainFile(fileName); // Llama a la función que verifica el tipo de archivo principal
+                if (!IsMainFile(fileName))
+                {
+                    throw new Exception($"File '{fileName}' is not a valid dist file.");
+                }
                 Directory.CreateDirectory(tmpDir); // Asegurarse de que el directorio temporal exista
 
                 // Descargar el archivo principal (JS o CSS)
