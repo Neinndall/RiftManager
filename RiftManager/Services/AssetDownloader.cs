@@ -1,8 +1,8 @@
-﻿// RiftManager.Services/AssetDownloader.cs
 using System;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
+using RiftManager.Utils;
 
 namespace RiftManager.Services
 {
@@ -10,11 +10,13 @@ namespace RiftManager.Services
     {
         private readonly HttpClient _httpClient;
         private readonly LogService _logService;
+        private readonly DirectoriesCreator _directoriesCreator;
 
-        public AssetDownloader(HttpClient httpClient, LogService logService)
+        public AssetDownloader(HttpClient httpClient, LogService logService, DirectoriesCreator directoriesCreator)
         {
-            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-            _logService = logService ?? throw new ArgumentNullException(nameof(logService));
+            _httpClient = httpClient;
+            _logService = logService;
+            _directoriesCreator = directoriesCreator;
         }
         
         // --- Method to Download Bundles ---
@@ -24,10 +26,7 @@ namespace RiftManager.Services
             string fullDestinationPath = Path.Combine(destinationFolder, fileName);
 
             string directory = Path.GetDirectoryName(fullDestinationPath);
-            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
+            _directoriesCreator.EnsureDirectoryExists(directory);
             
             if (File.Exists(fullDestinationPath))
             {
@@ -73,10 +72,7 @@ namespace RiftManager.Services
             string fullDestinationPath = Path.Combine(destinationFolder, fileName);
 
             string directory = Path.GetDirectoryName(fullDestinationPath);
-            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
+            _directoriesCreator.EnsureDirectoryExists(directory);
             
             if (File.Exists(fullDestinationPath))
             {
@@ -126,10 +122,7 @@ namespace RiftManager.Services
             string fullDestinationPath = Path.Combine(destinationFolder, fileName);
 
             string directory = Path.GetDirectoryName(fullDestinationPath);
-            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
+            _directoriesCreator.EnsureDirectoryExists(directory);
             
             if (File.Exists(fullDestinationPath))
             {
@@ -180,10 +173,7 @@ namespace RiftManager.Services
             string fullDestinationPath = Path.Combine(destinationDirectoryForGame, fileName);
 
             string directory = Path.GetDirectoryName(fullDestinationPath);
-            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
+            _directoriesCreator.EnsureDirectoryExists(directory);
             _logService.Log($"Downloaded: {fileName}");
             try
             {
@@ -206,6 +196,7 @@ namespace RiftManager.Services
                 {
                     _logService.LogError($"✗ HTTP Error for {fileName} ({(int?)httpEx.StatusCode}): {httpEx.Message}");
                     throw; 
+                }
             }
             catch (Exception ex)
             {
@@ -220,10 +211,7 @@ namespace RiftManager.Services
             string fullDestinationPath = Path.Combine(audioSavePath, fileName);
 
             string directory = Path.GetDirectoryName(fullDestinationPath);
-            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
+            _directoriesCreator.EnsureDirectoryExists(directory);
 
             if (File.Exists(fullDestinationPath))
             {
@@ -262,5 +250,5 @@ namespace RiftManager.Services
             }
         }
 
-        }
+    }
 }

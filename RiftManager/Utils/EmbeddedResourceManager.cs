@@ -6,7 +6,7 @@ namespace RiftManager.Utils
 {
     public static class EmbeddedResourceManager
     {
-        public static void ExtractDirectory(string resourceFolderPrefix, string targetDirectory)
+        public static void ExtractDirectory(string resourceFolderPrefix, string targetDirectory, DirectoriesCreator directoriesCreator)
         {
             var assembly = Assembly.GetExecutingAssembly();
 
@@ -23,10 +23,7 @@ namespace RiftManager.Utils
                     string targetPath = Path.Combine(targetDirectory, resourceName);
                     
                     string targetDir = Path.GetDirectoryName(targetPath);
-                    if (!Directory.Exists(targetDir))
-                    {
-                        Directory.CreateDirectory(targetDir);
-                    }
+                    directoriesCreator.EnsureDirectoryExists(targetDir);
 
                     using (var resourceStream = assembly.GetManifestResourceStream(resourceName))
                     {

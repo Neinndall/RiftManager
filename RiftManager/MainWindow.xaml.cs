@@ -129,14 +129,14 @@ namespace RiftManager
         private async Task LoadEvents()
         {
             _logService.Log("Loading events...");
-            _logService.LogDebug("LoadEvents: Iniciando carga de eventos desde la URL de navegación.");
+            _logService.LogDebug("LoadEvents: Starting event loading from navigation URL.");
             string navigationUrl = "https://content.publishing.riotgames.com/publishing-content/v1.0/public/client-navigation/league_client_navigation";
             _allEventData = await _eventService.TrackEvents(navigationUrl);
 
             if (_allEventData.Count == 0)
             {
                 _logService.LogWarning("No events found.");
-                _logService.LogDebug("LoadEvents: No se encontraron eventos. EventsListView.ItemsSource no se actualizará.");
+                _logService.LogDebug("LoadEvents: No events found. EventsListView.ItemsSource will not be updated.");
                 return;
             }
 
@@ -148,7 +148,7 @@ namespace RiftManager
 
             EventsListView.ItemsSource = filteredEvents;
             _logService.LogSuccess($"Found {filteredEvents.Count} events.");
-            _logService.LogDebug($"LoadEvents: Eventos cargados y asignados a EventsListView. Se encontraron {filteredEvents.Count} eventos después del filtrado.");
+            _logService.LogDebug($"LoadEvents: Events loaded and assigned to EventsListView. Found {filteredEvents.Count} events after filtering.");
         }
 
         private async void DownloadButton_Click(object sender, RoutedEventArgs e)
@@ -160,19 +160,19 @@ namespace RiftManager
             {
                 try
                 {
-                    _logService.LogDebug($"DownloadButton_Click: Iniciando descarga para el evento: {eventDetails.Title}");
+                    _logService.LogDebug($"DownloadButton_Click: Starting download for event: {eventDetails.Title}");
                     string assetsFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets");
                     
                     MainEventLink selectedLink = null;
 
                     if (eventDetails.MainEventLinks != null && eventDetails.MainEventLinks.Count > 1)
                     {
-                        _logService.LogDebug($"DownloadButton_Click: Múltiples enlaces principales encontrados ({eventDetails.MainEventLinks.Count}). Abriendo diálogo de selección.");
+                        _logService.LogDebug($"DownloadButton_Click: Multiple main links found ({eventDetails.MainEventLinks.Count}). Opening selection dialog.");
                         var dialog = new LinkSelectionDialog(eventDetails.MainEventLinks, eventDetails.Title);
                         if (dialog.ShowDialog() == true)
                         {
                             selectedLink = dialog.SelectedLink;
-                            _logService.LogDebug($"DownloadButton_Click: Enlace seleccionado por el usuario: {selectedLink?.Url ?? "N/A"}");
+                            _logService.LogDebug($"DownloadButton_Click: Link selected by user: {selectedLink?.Url ?? "N/A"}");
                         }
                         else
                         {
@@ -183,25 +183,25 @@ namespace RiftManager
                     else if (eventDetails.MainEventLinks != null && eventDetails.MainEventLinks.Count == 1)
                     {
                         selectedLink = eventDetails.MainEventLinks.First();
-                        _logService.LogDebug($"DownloadButton_Click: Un único enlace principal encontrado. Seleccionado automáticamente: {selectedLink?.Url ?? "N/A"}");
+                        _logService.LogDebug($"DownloadButton_Click: Single main link found. Automatically selected: {selectedLink?.Url ?? "N/A"}");
                     }
                     else
                     {
-                        _logService.LogDebug($"DownloadButton_Click: No se encontraron enlaces principales para selección. selectedLink permanece nulo.");
+                        _logService.LogDebug($"DownloadButton_Click: No main links found for selection. selectedLink remains null.");
                     }
 
                     if (selectedLink != null || (eventDetails.MainEventLinks == null || !eventDetails.MainEventLinks.Any()))
                     {
-                        _logService.LogDebug($"DownloadButton_Click: Procesando evento con selectedLink: {selectedLink?.Url ?? "N/A"}");
+                        _logService.LogDebug($"DownloadButton_Click: Processing event with selectedLink: {selectedLink?.Url ?? "N/A"}");
                         await _eventProcessor.ProcessEventAsync(eventDetails, assetsFolderPath, selectedLink);
 
                         string baseDirForRelativePath = AppDomain.CurrentDomain.BaseDirectory;
-                        _logService.LogDebug($"DownloadButton_Click: Eliminando directorios vacíos en {assetsFolderPath}");
+                        _logService.LogDebug($"DownloadButton_Click: Removing empty directories in {assetsFolderPath}");
                         await FileSystemHelper.RemoveEmptyDirectories(assetsFolderPath, _logService, baseDirForRelativePath);
 
                         string eventAssetsFolderPath = Path.Combine(assetsFolderPath, eventDetails.NavigationItemId);
                         _logService.LogInteractiveSuccess($"Download finished for event: ", eventDetails.Title, eventAssetsFolderPath);
-                        _logService.LogDebug($"DownloadButton_Click: Descarga completada para el evento: {eventDetails.Title}");
+                        _logService.LogDebug($"DownloadButton_Click: Download completed for event: {eventDetails.Title}");
                     }
                     else
                     {
@@ -210,32 +210,30 @@ namespace RiftManager
                 }
                 catch (Exception ex)
                 { 
-                    _logService.LogError($"DownloadButton_Click: Error inesperado durante la descarga del evento {eventDetails.Title}: {ex.Message}");
+                    _logService.LogError($"DownloadButton_Click: Unexpected error during event download {eventDetails.Title}: {ex.Message}");
                     _logService.LogError($"DownloadButton_Click: StackTrace: {ex.StackTrace}");
                 }
             }
             else
             {
-                _logService.LogWarning("DownloadButton_Click: No hay evento seleccionado para descargar.");
+                _logService.LogWarning("DownloadButton_Click: No event selected for download.");
             }
         }
 
         private async void DownloadRiotManifests_Click(object sender, RoutedEventArgs e)
         {
-            string assetsFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets");
-            string riotClientAssetsDestinationFolder = Path.Combine(assetsFolderPath, "RiotClientAssets");
-            await _riotClientManifestService.ProcessRiotClientManifestsWithButtonLogicAsync(riotClientAssetsDestinationFolder);
+            await _riotClientManifestService.ProcessRiotClientManifestsWithButtonLogicAsync();
         }
 
         private void EventsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            _logService.LogDebug("EventsListView_SelectionChanged: Evento de selección de ListView disparado.");
+            _logService.LogDebug("EventsListView_SelectionChanged: ListView selection event fired.");
             try
             {
                 var selectedEvent = EventsListView.SelectedItem as EventDetails;
                 if (selectedEvent != null)
                 {
-                    _logService.LogDebug($"EventsListView_SelectionChanged: Evento seleccionado: {selectedEvent.Title} (ID: {selectedEvent.NavigationItemId})");
+                    _logService.LogDebug($"EventsListView_SelectionChanged: Selected event: {selectedEvent.Title} (ID: {selectedEvent.NavigationItemId})");
                     _selectedEvent = selectedEvent;
                     EventDetailsPanel.Visibility = Visibility.Visible;
                     EventTitleTextBlock.Text = selectedEvent.Title;
@@ -243,81 +241,81 @@ namespace RiftManager
 
                     // Update Event Type
                     string eventType = "";
-                    _logService.LogDebug($"EventsListView_SelectionChanged: Comprobando CatalogInformation (es nulo? {selectedEvent.CatalogInformation == null})");
+                    _logService.LogDebug($"EventsListView_SelectionChanged: Checking CatalogInformation (is null? {selectedEvent.CatalogInformation == null})");
                     if (selectedEvent.CatalogInformation != null) eventType += "Catalog (Unity Bundles) ";
-                    _logService.LogDebug($"EventsListView_SelectionChanged: Comprobando HasMainEmbedUrl (es {selectedEvent.HasMainEmbedUrl})");
+                    _logService.LogDebug($"EventsListView_SelectionChanged: Checking HasMainEmbedUrl (is {selectedEvent.HasMainEmbedUrl})");
                     if (selectedEvent.HasMainEmbedUrl) eventType += "Embed (Web Content) ";
                     EventTypeTextBlock.Text = string.IsNullOrWhiteSpace(eventType) ? "N/A" : eventType.Trim();
-                    _logService.LogDebug($"EventsListView_SelectionChanged: Tipo de evento determinado: {EventTypeTextBlock.Text}");
+                    _logService.LogDebug($"EventsListView_SelectionChanged: Event type determined: {EventTypeTextBlock.Text}");
 
                     // Update Main Event Links
-                    _logService.LogDebug($"EventsListView_SelectionChanged: Comprobando MainEventLinks (es nulo? {selectedEvent.MainEventLinks == null}, Count: {selectedEvent.MainEventLinks?.Count ?? 0})");
+                    _logService.LogDebug($"EventsListView_SelectionChanged: Checking MainEventLinks (is null? {selectedEvent.MainEventLinks == null}, Count: {selectedEvent.MainEventLinks?.Count ?? 0})");
                     if (selectedEvent.MainEventLinks != null && selectedEvent.MainEventLinks.Any() && selectedEvent.MainEventLinks.Count > 1)
                     {
                         MainLinksHeader.Visibility = Visibility.Visible;
                         MainEventLinksList.Visibility = Visibility.Visible;
                         MainEventLinksList.ItemsSource = selectedEvent.MainEventLinks;
-                        _logService.LogDebug($"EventsListView_SelectionChanged: Mostrando {selectedEvent.MainEventLinks.Count} enlaces principales.");
+                        _logService.LogDebug($"EventsListView_SelectionChanged: Showing {selectedEvent.MainEventLinks.Count} main links.");
                     }
                     else
                     {
                         MainLinksHeader.Visibility = Visibility.Collapsed;
                         MainEventLinksList.Visibility = Visibility.Collapsed;
                         MainEventLinksList.ItemsSource = null;
-                        _logService.LogDebug("EventsListView_SelectionChanged: Ocultando enlaces principales (menos de 2 o nulos).");
+                        _logService.LogDebug("EventsListView_SelectionChanged: Hiding main links (less than 2 or null).");
                     }
 
-                    _logService.LogDebug($"EventsListView_SelectionChanged: Comprobando BackgroundUrl (es nulo o vacío? {string.IsNullOrEmpty(selectedEvent.BackgroundUrl)})");
+                    _logService.LogDebug($"EventsListView_SelectionChanged: Checking BackgroundUrl (is null or empty? {string.IsNullOrEmpty(selectedEvent.BackgroundUrl)})");
                     if (!string.IsNullOrEmpty(selectedEvent.BackgroundUrl))
                     {
                         try
                         {
                             string highResUrl = GetHighResolutionUrl(selectedEvent.BackgroundUrl);
-                            _logService.LogDebug($"EventsListView_SelectionChanged: Intentando cargar imagen de fondo desde: {highResUrl}");
+                            _logService.LogDebug($"EventsListView_SelectionChanged: Attempting to load background image from: {highResUrl}");
                             EventBackgroundBrush.ImageSource = new BitmapImage(new Uri(highResUrl));
-                            _logService.LogDebug("EventsListView_SelectionChanged: Imagen de fondo cargada exitosamente.");
+                            _logService.LogDebug("EventsListView_SelectionChanged: Background image loaded successfully.");
                         }
                         catch (Exception uriEx)
                         {
-                            _logService.LogError($"EventsListView_SelectionChanged: Error al cargar la imagen de fondo para {selectedEvent.Title}: {uriEx.Message}");
-                            _logService.LogError($"EventsListView_SelectionChanged: StackTrace de la imagen de fondo: {uriEx.StackTrace}");
+                            _logService.LogError($"EventsListView_SelectionChanged: Error loading background image for {selectedEvent.Title}: {uriEx.Message}");
+                            _logService.LogError($"EventsListView_SelectionChanged: Background image StackTrace: {uriEx.StackTrace}");
                             EventBackgroundBrush.ImageSource = null; // Asegurarse de que no haya una imagen rota
                         }
                     }
                     else
                     {
                         EventBackgroundBrush.ImageSource = null; // Or a default image
-                        _logService.LogDebug("EventsListView_SelectionChanged: BackgroundUrl es nulo o vacío. No se cargará imagen de fondo.");
+                        _logService.LogDebug("EventsListView_SelectionChanged: BackgroundUrl is null or empty. No background image will be loaded.");
                     }
                 }
                 else
                 {
                     EventDetailsPanel.Visibility = Visibility.Collapsed;
-                    _logService.LogDebug("EventsListView_SelectionChanged: No hay evento seleccionado. Panel de detalles oculto.");
+                    _logService.LogDebug("EventsListView_SelectionChanged: No event selected. Details panel hidden.");
                 }
             }
             catch (Exception ex)
             {
-                _logService.LogError($"EventsListView_SelectionChanged: Error inesperado en la selección de evento: {ex.Message}");
+                _logService.LogError($"EventsListView_SelectionChanged: Unexpected error in event selection: {ex.Message}");
                 _logService.LogError($"EventsListView_SelectionChanged: StackTrace: {ex.StackTrace}");
             }
         }
 
         private string GetHighResolutionUrl(string originalUrl)
         {
-            _logService.LogDebug($"GetHighResolutionUrl: Procesando URL original: {originalUrl}");
+            _logService.LogDebug($"GetHighResolutionUrl: Processing original URL: {originalUrl}");
             // Attempt to remove common thumbnail/low-res markers from Riot's CDN URLs
             // This is experimental and might not work for all URLs
             string highResUrl = Regex.Replace(originalUrl, "_tn.jpg", ".jpg", RegexOptions.IgnoreCase);
             // You could add more rules here, e.g., for query parameters like ?width=300
             // highResUrl = Regex.Replace(highResUrl, "\\?width=[^&]*", "", RegexOptions.IgnoreCase);
-            _logService.LogDebug($"GetHighResolutionUrl: URL de alta resolución resultante: {highResUrl}");
+            _logService.LogDebug($"GetHighResolutionUrl: Resulting high resolution URL: {highResUrl}");
             return highResUrl;
         }
 
         private void ToolsButton_Click(object sender, RoutedEventArgs e)
         {
-            _logService.LogDebug("ToolsButton_Click: Botón Herramientas clickeado. Mostrando menú contextual.");
+            _logService.LogDebug("ToolsButton_Click: Tools button clicked. Showing context menu.");
             ContextMenu cm = new ContextMenu();
 
             MenuItem downloadManifestsMenuItem = new MenuItem();

@@ -17,15 +17,18 @@ namespace RiftManager.Services
         private readonly LogService _logService;
         private readonly JsonFetcherService _jsonFetcherService;
         private readonly CatalogParser _catalogParser;
+        private readonly DirectoriesCreator _directoriesCreator;
 
         public BundleService(
             JsonFetcherService jsonFetcherService,
             LogService logService,
-            CatalogParser catalogParser)
+            CatalogParser catalogParser,
+            DirectoriesCreator directoriesCreator)
         {
             _jsonFetcherService = jsonFetcherService;
             _logService = logService;
             _catalogParser = catalogParser;
+            _directoriesCreator = directoriesCreator;
         }
         
         public async Task<List<string>> GetBundleUrlsFromCatalog(string catalogJsonUrl, string assetBaseUrl, string metagameId = null)
@@ -46,8 +49,7 @@ namespace RiftManager.Services
             _logService.LogDebug($"[BundleService] Base URL for Bundle downloads: {assetBaseUrl}WebGL/");
             _logService.LogDebug($"[BundleService] Metagame ID received: {metagameId ?? "N/A"}");
 
-            string tempDir = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
-            Directory.CreateDirectory(tempDir);
+            string tempDir = _directoriesCreator.CreateTemporaryDirectory();
             string binPath = Path.Combine(tempDir, "catalog.bin");
             string jsonPath = Path.Combine(tempDir, "catalog.json");
             string exePath = Path.Combine(tempDir, "bintojson.exe");
@@ -152,16 +154,15 @@ namespace RiftManager.Services
                 return;
             }
 
-            Directory.CreateDirectory(assetsOutputPath);
+            _directoriesCreator.EnsureDirectoryExists(assetsOutputPath);
 
-            string tempToolsDir = Path.Combine(Path.GetTempPath(), "RiftManager", Guid.NewGuid().ToString());
-            Directory.CreateDirectory(tempToolsDir);
+            string tempToolsDir = _directoriesCreator.CreateTemporaryDirectory();
             string assetStudioCliExePath = Path.Combine(tempToolsDir, "AssetStudio", "AssetStudioModCLI.exe");
 
             try
             {
                 _logService.LogDebug("[BundleService] Extracting AssetStudioModCLI from embedded resources...");
-                EmbeddedResourceManager.ExtractDirectory("AssetStudio", tempToolsDir);
+                EmbeddedResourceManager.ExtractDirectory("AssetStudio", tempToolsDir, _directoriesCreator);
                 _logService.LogDebug($"[BundleService] AssetStudioModCLI extracted to: {tempToolsDir}");
 
                 if (!File.Exists(assetStudioCliExePath))

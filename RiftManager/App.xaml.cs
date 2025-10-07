@@ -4,6 +4,7 @@ using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using RiftManager.Interfaces;
 using RiftManager.Services;
+using RiftManager.Utils;
 
 namespace RiftManager
 {
@@ -23,6 +24,7 @@ namespace RiftManager
             // Add services to the container
             services.AddSingleton<LogService>();
             services.AddSingleton<HttpClient>();
+            services.AddSingleton<DirectoriesCreator>();
 
             // Services with interfaces or specific logic
             services.AddTransient<NavigationParser>();

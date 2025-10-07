@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using RiftManager.Utils;
 
 namespace RiftManager.Services
 {
@@ -11,10 +12,9 @@ namespace RiftManager.Services
         public event Action<string, string> OnLogMessage; // Level, Message
         public event Action<string, string, string> OnLogInteractiveSuccess; // Pre-text, link-text, path
 
-        public LogService()
+        public LogService(DirectoriesCreator directoriesCreator)
         {
-            string logDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Logs");
-            Directory.CreateDirectory(logDirectory);
+            string logDirectory = directoriesCreator.LogFolder;
             _logFilePath = Path.Combine(logDirectory, "application.log");
 
             try

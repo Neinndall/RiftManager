@@ -15,20 +15,19 @@ namespace RiftManager.Services
         private readonly JsonFetcherService _jsonFetcherService;
         private readonly AssetDownloader _assetDownloader;
         private readonly LogService _logService;
+        private readonly DirectoriesCreator _directoriesCreator;
         private readonly string _lastManifestDownloadFilePath;
         private bool _isManifestDownloadRunning = false;
 
         public event Action<bool, string> StateChanged;
 
-        public RiotClientManifestService(JsonFetcherService jsonFetcherService, LogService logService, AssetDownloader assetDownloader)
+        public RiotClientManifestService(JsonFetcherService jsonFetcherService, LogService logService, AssetDownloader assetDownloader, DirectoriesCreator directoriesCreator)
         {
             _jsonFetcherService = jsonFetcherService;
             _assetDownloader = assetDownloader;
             _logService = logService;
-            string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            string appFolder = Path.Combine(appDataPath, "RiftManager");
-            Directory.CreateDirectory(appFolder);
-            _lastManifestDownloadFilePath = Path.Combine(appFolder, "last_manifest_download.txt");
+            _directoriesCreator = directoriesCreator;
+            _lastManifestDownloadFilePath = Path.Combine(_directoriesCreator.AppDataFolder, "last_manifest_download.txt");
         }
 
         public async Task UpdateManifestButtonStateAsync()
@@ -72,7 +71,7 @@ namespace RiftManager.Services
             StateChanged?.Invoke(isButtonEnabled, toolTipText);
         }
 
-        public async Task ProcessRiotClientManifestsWithButtonLogicAsync(string baseManifestsDownloadDirectory)
+        public async Task ProcessRiotClientManifestsWithButtonLogicAsync()
         {
             if (_isManifestDownloadRunning)
             {
@@ -85,6 +84,7 @@ namespace RiftManager.Services
 
             try
             {
+                string baseManifestsDownloadDirectory = _directoriesCreator.GetManifestsDownloadDirectory();
                 await ProcessRiotClientManifests(baseManifestsDownloadDirectory);
 
                 // Save timestamp on success
@@ -117,7 +117,6 @@ namespace RiftManager.Services
                 "https://riot-client.secure.dyn.riotcdn.net/channels/public/rccontent/theme/manifest_live.json",
             };
 
-            Directory.CreateDirectory(baseManifestsDownloadDirectory);
             _logService.Log("Starting processing Riot Client Manifests...");
             foreach (var url in riotClientManifestUrls)
             {
@@ -173,10 +172,7 @@ namespace RiftManager.Services
 
                     // Determinar el subdirectorio para guardar el archivo
                     string gameSubDir = GetSubDirectoryForUrl(manifestUrl);
-                    string targetDir = Path.Combine(baseManifestsDownloadDirectory, gameSubDir);
-                    
-                    // Asegurarse de que el directorio de destino existe
-                    Directory.CreateDirectory(targetDir);
+                    string targetDir = _directoriesCreator.GetManifestsGameSubdirectory(gameSubDir);
 
                     _logService.LogDebug($"Trying to download: {fullUrl}");
 
