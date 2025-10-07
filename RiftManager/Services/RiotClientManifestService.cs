@@ -15,12 +15,93 @@ namespace RiftManager.Services
         private readonly JsonFetcherService _jsonFetcherService;
         private readonly AssetDownloader _assetDownloader;
         private readonly LogService _logService;
+        private readonly string _lastManifestDownloadFilePath;
+        private bool _isManifestDownloadRunning = false;
+
+        public event Action<bool, string> StateChanged;
 
         public RiotClientManifestService(JsonFetcherService jsonFetcherService, LogService logService, AssetDownloader assetDownloader)
         {
             _jsonFetcherService = jsonFetcherService;
             _assetDownloader = assetDownloader;
             _logService = logService;
+            string appDataPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            string appFolder = Path.Combine(appDataPath, "RiftManager");
+            Directory.CreateDirectory(appFolder);
+            _lastManifestDownloadFilePath = Path.Combine(appFolder, "last_manifest_download.txt");
+        }
+
+        public async Task UpdateManifestButtonStateAsync()
+        {
+            bool isButtonEnabled = true;
+            string toolTipText = "Download Riot Client asset manifests.";
+
+            if (File.Exists(_lastManifestDownloadFilePath))
+            {
+                try
+                {
+                    string[] lines = await File.ReadAllLinesAsync(_lastManifestDownloadFilePath);
+                    if (lines.Length >= 2)
+                    {
+                        string storedDateStr = lines[0];
+                        string storedHash = lines[1];
+                        string expectedHash = Crypto.Md5HashEncode(storedDateStr);
+
+                        if (storedHash == expectedHash && DateTime.TryParse(storedDateStr, out DateTime lastDownloadDate))
+                        {
+                            if (lastDownloadDate.Year == DateTime.Now.Year && lastDownloadDate.Month == DateTime.Now.Month)
+                            {
+                                isButtonEnabled = false;
+                                DateTime nextAvailableDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1).AddMonths(1);
+                                toolTipText = $"This has already been used this month. Next available on {nextAvailableDate:MM/dd/yyyy}.";
+                            }
+                        }
+                        else
+                        {
+                            _logService.LogWarning("Manifest download timestamp has been tampered with. Resetting...");
+                            File.Delete(_lastManifestDownloadFilePath);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logService.LogError($"Error checking manifest download timestamp: {ex.Message}");
+                }
+            }
+
+            StateChanged?.Invoke(isButtonEnabled, toolTipText);
+        }
+
+        public async Task ProcessRiotClientManifestsWithButtonLogicAsync(string baseManifestsDownloadDirectory)
+        {
+            if (_isManifestDownloadRunning)
+            {
+                _logService.LogWarning("Manifest download is already in progress.");
+                return;
+            }
+
+            _isManifestDownloadRunning = true;
+            StateChanged?.Invoke(false, "Download Riot Client asset manifests.");
+
+            try
+            {
+                await ProcessRiotClientManifests(baseManifestsDownloadDirectory);
+
+                // Save timestamp on success
+                string currentDate = DateTime.Now.ToString("o");
+                string dateHash = Crypto.Md5HashEncode(currentDate);
+                await File.WriteAllLinesAsync(_lastManifestDownloadFilePath, new[] { currentDate, dateHash });
+                await UpdateManifestButtonStateAsync();
+            }
+            catch (Exception ex)
+            {
+                _logService.LogError($"Error downloading Riot manifests: {ex.Message}");
+                StateChanged?.Invoke(true, "Download Riot Client asset manifests."); // Re-enable on failure
+            }
+            finally
+            {
+                _isManifestDownloadRunning = false;
+            }
         }
 
         public async Task ProcessRiotClientManifests(string baseManifestsDownloadDirectory)
@@ -37,13 +118,12 @@ namespace RiftManager.Services
             };
 
             Directory.CreateDirectory(baseManifestsDownloadDirectory);
-
             _logService.Log("Starting processing Riot Client Manifests...");
             foreach (var url in riotClientManifestUrls)
             {
                 await ProcessSingleManifest(url, baseManifestsDownloadDirectory);
             }
-            _logService.LogSuccess("Processing completed.");
+            _logService.LogInteractiveSuccess("Downloaded completed: ", "Assets from Manifests", baseManifestsDownloadDirectory);
         }
 
         private async Task ProcessSingleManifest(string manifestUrl, string baseManifestsDownloadDirectory)
@@ -104,7 +184,7 @@ namespace RiftManager.Services
                     {
                         // Usar tu AssetDownloader para descargar el archivo
                         await _assetDownloader.DownloadAssetForManifest(fullUrl, targetDir);
-                        _logService.Log($"Downloaded: {fullUrl}"); 
+                        _logService.LogDebug($"Downloaded from: {fullUrl}"); 
                     }
                     catch (HttpRequestException httpEx) when (httpEx.StatusCode == System.Net.HttpStatusCode.NotFound)
                     {

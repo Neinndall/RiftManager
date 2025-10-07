@@ -39,8 +39,18 @@ namespace RiftManager
             // Subscribe to log messages for the UI
             _logService.OnLogMessage += LogMessageReceived;
             _logService.OnLogInteractiveSuccess += LogInteractiveSuccessReceived;
+            _riotClientManifestService.StateChanged += OnManifestButtonStateChanged;
 
             Loaded += MainWindow_Loaded;
+        }
+
+        private void OnManifestButtonStateChanged(bool isEnabled, string tooltip)
+        {
+            Dispatcher.InvokeAsync(() =>
+            {
+                RiotManifestsButton.IsEnabled = isEnabled;
+                RiotManifestsButton.ToolTip = tooltip;
+            });
         }
 
         private void LogInteractiveSuccessReceived(string preLinkText, string linkText, string path)
@@ -112,6 +122,7 @@ namespace RiftManager
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
+            await _riotClientManifestService.UpdateManifestButtonStateAsync();
             await LoadEvents();
         }
 
@@ -211,21 +222,9 @@ namespace RiftManager
 
         private async void DownloadRiotManifests_Click(object sender, RoutedEventArgs e)
         {
-            _logService.Log("Downloading Riot Manifests...");
-            _logService.LogDebug("DownloadRiotManifests_Click: Iniciando descarga de manifiestos de Riot.");
             string assetsFolderPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets");
             string riotClientAssetsDestinationFolder = Path.Combine(assetsFolderPath, "RiotClientAssets");
-            try
-            {
-                await _riotClientManifestService.ProcessRiotClientManifests(riotClientAssetsDestinationFolder);
-                _logService.LogSuccess("Riot Manifests download finished.");
-                _logService.LogDebug("DownloadRiotManifests_Click: Descarga de manifiestos de Riot completada.");
-            }
-            catch (Exception ex)
-            {
-                _logService.LogError($"DownloadRiotManifests_Click: Error al descargar manifiestos de Riot: {ex.Message}");
-                _logService.LogError($"DownloadRiotManifests_Click: StackTrace: {ex.StackTrace}");
-            }
+            await _riotClientManifestService.ProcessRiotClientManifestsWithButtonLogicAsync(riotClientAssetsDestinationFolder);
         }
 
         private void EventsListView_SelectionChanged(object sender, SelectionChangedEventArgs e)

@@ -33,7 +33,7 @@ namespace RiftManager
             services.AddTransient<AssetDownloader>();
             services.AddTransient<BundleService>();
             services.AddTransient<RiotAudioLoader>();
-            services.AddTransient<RiotClientManifestService>();
+            services.AddSingleton<RiotClientManifestService>();
             services.AddTransient<EmbedAssetScraperService>();
             services.AddTransient<EventCoordinatorService>();
             services.AddTransient<EventProcessor>();

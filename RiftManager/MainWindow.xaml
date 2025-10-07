@@ -15,7 +15,7 @@
         </Grid.RowDefinitions>
 
         <Grid Grid.Row="0" Background="{StaticResource HeaderBackground}" Height="50">
-            <Button Content="Riot Manifests" Style="{StaticResource ModernButton}" Click="DownloadRiotManifests_Click" HorizontalAlignment="Left" VerticalAlignment="Center" Width="120" Height="30" Margin="10,0,0,0"/>
+            <Button x:Name="RiotManifestsButton" Content="Riot Manifests" Style="{StaticResource ModernButton}" Click="DownloadRiotManifests_Click" HorizontalAlignment="Left" VerticalAlignment="Center" Width="120" Height="30" Margin="10,0,0,0" ToolTipService.ShowOnDisabled="True"/>
         </Grid>
 
         <Grid Grid.Row="1" Margin="10">

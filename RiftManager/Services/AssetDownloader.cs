@@ -184,7 +184,7 @@ namespace RiftManager.Services
             {
                 Directory.CreateDirectory(directory);
             }
-            _logService.Log($"Downloading manifest: {fileName}");
+            _logService.Log($"Downloaded: {fileName}");
             try
             {
                 HttpResponseMessage response = await _httpClient.GetAsync(assetUrl, HttpCompletionOption.ResponseHeadersRead);
@@ -200,13 +200,12 @@ namespace RiftManager.Services
             {
                 if (httpEx.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
-                    _logService.LogWarning($"{fileName} not found at {assetUrl}");
+                    _logService.LogDebug($"{fileName} not found at {assetUrl}");
                 }
                 else
                 {
                     _logService.LogError($"✗ HTTP Error for {fileName} ({(int?)httpEx.StatusCode}): {httpEx.Message}");
-                }
-                throw; 
+                    throw; 
             }
             catch (Exception ex)
             {
