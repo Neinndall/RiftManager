@@ -115,6 +115,7 @@ namespace RiftManager.Services
                 "https://bacon.secure.dyn.riotcdn.net/channels/public/rccontent/theme/manifest.json",
                 "https://lol.secure.dyn.riotcdn.net/channels/public/rccontent/theme/manifest_default.json",
                 "https://riot-client.secure.dyn.riotcdn.net/channels/public/rccontent/theme/manifest_live.json",
+                "https://lion.secure.dyn.riotcdn.net/channels/public/rccontent/theme/manifest.json"
             };
 
             _logService.Log("Starting processing Riot Client Manifests...");
@@ -227,6 +228,7 @@ namespace RiftManager.Services
             if (url.Contains("bacon", StringComparison.OrdinalIgnoreCase)) return "lor";
             if (url.Contains("manifest_default.json", StringComparison.OrdinalIgnoreCase)) return "lol";
             if (url.Contains("manifest_live.json", StringComparison.OrdinalIgnoreCase)) return "riot-client";
+            if (url.Contains("lion", StringComparison.OrdinalIgnoreCase)) return "2xko";
             return "unknown"; // 'unknown' en lugar de 'otros' para consistencia con tu antiguo log
         }
     }
