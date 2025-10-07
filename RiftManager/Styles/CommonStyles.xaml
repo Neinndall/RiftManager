@@ -99,4 +99,12 @@
         </Setter>
     </Style>
 
+    <!-- Estilo para la cabecera de una tarjeta -->
+    <Style x:Key="CardHeaderBorder" TargetType="Border">
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BorderColor}"/>
+        <Setter Property="Background" Value="{StaticResource HeaderBackground}"/>
+        <Setter Property="CornerRadius" Value="4,4,0,0"/>
+    </Style>
+
 </ResourceDictionary>

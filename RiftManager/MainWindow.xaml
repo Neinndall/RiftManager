@@ -24,7 +24,7 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <!-- Columna Izquierda: Lista de Eventos -->
+            <!-- Left Column: Event List -->
             <Border Grid.Column="0" CornerRadius="5" BorderBrush="{StaticResource BorderColor}" BorderThickness="1" ClipToBounds="True">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -32,8 +32,8 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
 
-                    <!-- Cabecera -->
-                    <Border BorderThickness="0,0,0,1" BorderBrush="{StaticResource BorderColor}" Background="{StaticResource HeaderBackground}">
+                    <!-- Header -->
+                    <Border Style="{StaticResource CardHeaderBorder}">
                         <TextBlock Text="List of Events" Foreground="{StaticResource TextPrimary}" FontSize="14" FontWeight="SemiBold" Margin="10,8"/>
                     </Border>
 
@@ -53,14 +53,14 @@
                 </Grid>
             </Border>
 
-            <!-- Columna Derecha: Detalles y Log -->
+            <!-- Right Column: Details and Log -->
             <Grid Grid.Column="1" Margin="10,0,0,0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
 
-                <!-- Panel de Detalles del Evento Seleccionado -->
+                <!-- Selected Event Details Panel -->
                 <StackPanel Name="EventDetailsPanel" Grid.Row="0" Visibility="Collapsed">
                     <Border CornerRadius="5" Margin="0,0,0,10">
                         <Border.Background>
@@ -77,7 +77,7 @@
                         </Grid>
                     </Border>
                     
-                    <!-- Detalles adicionales del evento -->
+                    <!-- Additional event details -->
                     <Grid Margin="15,0,15,10">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -93,10 +93,10 @@
                         <TextBlock Grid.Row="0" Grid.Column="0" Text="ID:" Foreground="{StaticResource TextLabel}" Margin="0,0,5,0"/>
                         <TextBlock x:Name="EventIdTextBlock" Grid.Row="0" Grid.Column="1" Text="{Binding NavigationItemId}" Foreground="{StaticResource TextPrimary}"/>
 
-                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Tipo:" Foreground="{StaticResource TextLabel}" Margin="0,5,5,0"/>
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Type:" Foreground="{StaticResource TextLabel}" Margin="0,5,5,0"/>
                         <TextBlock x:Name="EventTypeTextBlock" Grid.Row="1" Grid.Column="1" Text="N/A" Foreground="{StaticResource TextPrimary}" Margin="0,5,0,0"/>
 
-                        <TextBlock x:Name="MainLinksHeader" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Text="Enlaces Principales:" Foreground="{StaticResource TextLabel}" Margin="0,10,0,5" Visibility="Collapsed"/>
+                        <TextBlock x:Name="MainLinksHeader" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Text="Main Links:" Foreground="{StaticResource TextLabel}" Margin="0,10,0,5" Visibility="Collapsed"/>
                         <ItemsControl x:Name="MainEventLinksList" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,0,0" Visibility="Collapsed">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
@@ -115,7 +115,7 @@
                     <Button Name="DownloadEventButton" Content="Download Event Assets" Style="{StaticResource ModernButton}" Click="DownloadButton_Click" Margin="15,0,15,10"/>
                 </StackPanel>
 
-                <!-- Visor de Logs -->
+                <!-- Log Viewer -->
                 <RichTextBox Name="LogRichTextBox" Grid.Row="1" Style="{StaticResource LogRichTextBoxStyle}"/>
             </Grid>
         </Grid>

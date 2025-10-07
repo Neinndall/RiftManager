@@ -44,7 +44,7 @@ namespace RiftManager.Services
             string metagameIdToProcess = (selectedMainEventLink != null) ? selectedMainEventLink.MetagameId : null;
 
             // --- START DETAILED LOG FOR THE SELECTED EVENT ---
-            _logService.Log($"\n--- Processing Event: {currentEvent.Title} (ID: {currentEvent.NavigationItemId}) ---");
+            _logService.Log($"Processing Event: {currentEvent.Title} (ID: {currentEvent.NavigationItemId})");
             _logService.Log($"NavigationItemID: {currentEvent.NavigationItemId}");
             _logService.Log($"Title: {currentEvent.Title}");
 
