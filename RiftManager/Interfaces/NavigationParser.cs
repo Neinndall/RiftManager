@@ -20,6 +20,13 @@ namespace RiftManager.Interfaces
             if (urlToken != null && urlToken.Type == JTokenType.String)
             {
                 string url = urlToken.ToString();
+
+                // NEW: Clean the URL from {locale} placeholder
+                if (url != null && url.Contains("{locale}"))
+                {
+                    url = url.Replace("{locale}", "");
+                }
+
                 if (url != null && url.Contains(EmbedUrlIdentifier, StringComparison.OrdinalIgnoreCase))
                 {
                     return url;
