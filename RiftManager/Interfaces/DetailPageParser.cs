@@ -27,96 +27,41 @@ namespace RiftManager.Interfaces
 
             try
             {
-                JToken bladesToken = eventDetailPageData["blades"];
-                if (bladesToken != null && bladesToken.Type == JTokenType.Array)
-                {
-                    foreach (JToken blade in bladesToken)
-                    {
-                        // Nueva lógica para backdrop.background.url (cuando es una imagen directa)
-                        JToken backgroundToken = blade.SelectToken("backdrop.background");
-                        if (backgroundToken != null)
-                        {
-                            // AÑADIDO: Si background tiene una propiedad "url" y es de tipo string, es una imagen directa.
-                            if (backgroundToken["url"] is JToken backgroundUrlToken && backgroundUrlToken.Type == JTokenType.String)
-                            {
-                                string backgroundImageUrl = backgroundUrlToken.ToString();
-                                if (!string.IsNullOrEmpty(backgroundImageUrl))
-                                {
-                                    assetUrls.Add(backgroundImageUrl);
-                                }
-                            }
-
-                            // Lógica existente para backdrop.background.sources (video)
-                            if (backgroundToken["sources"] is JArray sourcesArray)
-                            {
-                                foreach (var source in sourcesArray)
-                                {
-                                    if (source["src"] is JToken srcToken && srcToken.Type == JTokenType.String)
-                                    {
-                                        assetUrls.Add(srcToken.ToString());
-                                    }
-                                }
-                            }
-                            // Lógica existente para backdrop.background.thumbnail (thumbnail de video)
-                            if (backgroundToken.SelectToken("thumbnail.url") is JToken thumbnailUrlToken && thumbnailUrlToken.Type == JTokenType.String)
-                            {
-                                assetUrls.Add(thumbnailUrlToken.ToString());
-                            }
-                        }
-
-                        // header.media (imagen del encabezado)
-                        if (blade.SelectToken("header.media.url") is JToken mediaUrlToken && mediaUrlToken.Type == JTokenType.String)
-                        {
-                            assetUrls.Add(mediaUrlToken.ToString());
-                        }
-
-                        // leagueClientTabContentGroups.ctas.media (imágenes de skins, etc.)
-                        if (blade["leagueClientTabContentGroups"] is JArray tabGroupsArray)
-                        {
-                            foreach (JToken tabGroup in tabGroupsArray)
-                            {
-                                if (tabGroup["ctas"] is JArray ctasArray)
-                                {
-                                    foreach (JToken cta in ctasArray)
-                                    {
-                                        if (cta.SelectToken("media.url") is JToken ctaMediaUrlToken && ctaMediaUrlToken.Type == JTokenType.String)
-                                        {
-                                            assetUrls.Add(ctaMediaUrlToken.ToString());
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // links.media (imágenes de cinematic, motion comics secundarios, etc.) y iframes
-                        JToken currentLinksToken = blade.SelectToken("header.links") ?? blade["links"];
-                        if (currentLinksToken is JArray linksArray)
-                        {
-                            foreach (JToken link in linksArray)
-                            {
-                                if (link.SelectToken("media.url") is JToken linkMediaUrlToken && linkMediaUrlToken.Type == JTokenType.String)
-                                {
-                                    assetUrls.Add(linkMediaUrlToken.ToString());
-                                }
-                                // Buscar URLs de iframes que podrían ser assets o contenido relevante
-                                JToken actionToken = link["action"];
-                                if (actionToken != null && actionToken.Value<string>("type") == "open_iframe")
-                                {
-                                    if (actionToken.SelectToken("payload.url") is JToken iframeUrlToken && iframeUrlToken.Type == JTokenType.String)
-                                    {
-                                        assetUrls.Add(iframeUrlToken.ToString());
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                FindUrlsRecursively(eventDetailPageData, assetUrls);
             }
             catch (Exception e)
             {
                 _logService.LogError($"DetailPageParser: Error al extraer assets adicionales de la página de detalle: {e.Message}");
             }
             return assetUrls.Distinct().ToList(); // Eliminar duplicados
+        }
+
+        private void FindUrlsRecursively(JToken token, List<string> urls)
+        {
+            if (token is JObject obj)
+            {
+                foreach (var property in obj.Properties())
+                {
+                    if (property.Name == "url" && property.Value.Type == JTokenType.String)
+                    {
+                        string url = property.Value.ToString();
+                        if (url.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
+                            url.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
+                            url.EndsWith(".svg", StringComparison.OrdinalIgnoreCase))
+                        {
+                            urls.Add(url);
+                        }
+                    }
+                    FindUrlsRecursively(property.Value, urls);
+                }
+            }
+            else if (token is JArray array)
+            {
+                foreach (var item in array)
+                {
+                    FindUrlsRecursively(item, urls);
+                }
+            }
         }
 
         /// <summary>
