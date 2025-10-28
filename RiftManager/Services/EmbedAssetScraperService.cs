@@ -139,6 +139,13 @@ namespace RiftManager.Services
                     continue; // This 'continue' now has a loop to operate on
                 }
                 
+                // NEW: Ignore absolute URLs or external domains like lolesports
+                if (assetRelativePath.StartsWith("//") || assetRelativePath.Contains("lolesports.com"))
+                {
+                    _logService.LogWarning($"Skipping external or absolute asset path: {assetRelativePath}");
+                    continue;
+                }
+
                 // Construir la URL completa para la descarga.
                 string fullAssetUrl = $"{downloadBaseUrl}/{assetRelativePath.TrimStart('/')}";
                 

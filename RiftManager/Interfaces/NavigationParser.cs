@@ -15,11 +15,27 @@ namespace RiftManager.Interfaces
         /// <returns>La URL principal si se encuentra y contiene el identificador de embed.rgpub.io, de lo contrario null.</returns>
         public string GetMainEventUrlFromNavigationItem(JToken eventToken)
         {
-            JToken urlToken = eventToken.SelectToken("action.payload.url");
+            JToken actionToken = eventToken["action"];
+            if (actionToken == null) return null;
+
+            string actionType = actionToken.Value<string>("type");
+            if (actionType != "iframed")
+            {
+                return null;
+            }
+
+            JToken urlToken = actionToken.SelectToken("payload.url");
 
             if (urlToken != null && urlToken.Type == JTokenType.String)
             {
                 string url = urlToken.ToString();
+
+                // NEW: Clean the URL from {locale} placeholder
+                if (url != null && url.Contains("{locale}"))
+                {
+                    url = url.Replace("{locale}", "");
+                }
+
                 if (url != null && url.Contains(EmbedUrlIdentifier, StringComparison.OrdinalIgnoreCase))
                 {
                     return url;
