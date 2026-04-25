@@ -74,20 +74,7 @@ namespace RiftManager.Services
                                 MetagameId = null // No hay MetagameId en este nivel de la navegación
                             });
 
-                            fullCatalogJsonUrl = await _webScraper.GetCatalogBaseUrl(currentEvent.MainEventUrl, eventTitle);
-                            if (fullCatalogJsonUrl != null)
-                            {
-                                string assetBaseUrlForBundles = fullCatalogJsonUrl.Replace("catalog.bin", "");
-                                currentEvent.CatalogInformation = new Models.CatalogData
-                                {
-                                    BaseUrl = assetBaseUrlForBundles,
-                                    CatalogJsonUrl = fullCatalogJsonUrl
-                                };
-                            }
-                            else
-                            {
-                                currentEvent.CatalogInformation = null; // Asegurarse de que sea null si no se encuentra un catálogo válido
-                            }
+                            currentEvent.CatalogInformation = null; // Se procesará bajo demanda en EventProcessor
                         }
 
                         currentEvent.BackgroundUrl = eventElement.SelectToken("background.url")?.ToString();

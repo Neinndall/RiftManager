@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -26,19 +26,18 @@ namespace RiftManager.Services
 
         public async Task ProcessAndDownloadAudioUrls(string extractedAssetsPath, string catalogBaseUrl, string audioSavePath)
         {
-            _logService.Log("[RiotAudioLoader] Starting a new audio search process in MotionComic files...");
+            _logService.Log("[RiotAudioLoader] Starting a new deep audio search in JSON assets...");
             Directory.CreateDirectory(audioSavePath);
 
             string searchPath = Path.Combine(extractedAssetsPath, "Assets", "Prefabs", "Comics");
 
             if (!Directory.Exists(searchPath))
             {
-                _logService.LogWarning($"[RiotAudioLoader] El directorio específico de cómics no existe: {searchPath}.");
+                _logService.LogWarning($"[RiotAudioLoader] Comic assets directory not found: {searchPath}. Audio extraction skipped.");
                 return;
             }
 
-            var letteringAudioUrls = new List<string>();
-            var panelAudioUrls = new List<string>();
+            var audioUrlsToDownload = new HashSet<string>();
             string cleanBaseUrl = CleanBaseUrl(catalogBaseUrl);
 
             try
@@ -47,81 +46,39 @@ namespace RiftManager.Services
 
                 foreach (var jsonFile in jsonFiles)
                 {
-                    var fileName = Path.GetFileName(jsonFile);
+                    string jsonContent = await File.ReadAllTextAsync(jsonFile);
+                    JToken root = JToken.Parse(jsonContent);
 
-                    try
+                    // Buscamos TODAS las ocurrencias de "clipName" en el JSON, sin importar la profundidad
+                    var clipNames = root.SelectTokens("..clipName")
+                                        .Where(t => t.Type == JTokenType.String)
+                                        .Select(t => t.ToString())
+                                        .Where(s => !string.IsNullOrEmpty(s))
+                                        .Distinct();
+
+                    foreach (var clipName in clipNames)
                     {
-                        string jsonContent = await File.ReadAllTextAsync(jsonFile);
-                        JToken root = JToken.Parse(jsonContent);
-
-                        if (fileName.StartsWith("MotionComicLettering", StringComparison.OrdinalIgnoreCase))
+                        string folder = "SoundFX"; // Por defecto para SFX y MU
+                        
+                        if (clipName.Contains("_VO", StringComparison.OrdinalIgnoreCase))
                         {
-                            JToken clipNameToken = root.SelectToken("letteringSfx.clipName");
-                            if (clipNameToken != null && clipNameToken.Type == JTokenType.String)
-                            {
-                                string clipName = clipNameToken.ToString();
-                                if (!string.IsNullOrEmpty(clipName))
-                                {
-                                    letteringAudioUrls.Add($"{cleanBaseUrl}/AudioLocales/en_US/{clipName}.ogg");
-                                }
-                            }
+                            folder = "AudioLocales/en_US";
                         }
-                        else if (fileName.StartsWith("MotionComicPanel", StringComparison.OrdinalIgnoreCase))
-                        {
-                            JToken panelClipNameToken = root.SelectToken("panelSfx.clipName");
-                            if (panelClipNameToken != null && panelClipNameToken.Type == JTokenType.String)
-                            {
-                                string clipName = panelClipNameToken.ToString();
-                                if (!string.IsNullOrEmpty(clipName))
-                                {
-                                    panelAudioUrls.Add($"{cleanBaseUrl}/SoundFX/{clipName}.ogg");
-                                }
-                            }
-
-                            if (root["audioEvents"] is JArray audioEvents)
-                            {
-                                foreach (var audioEvent in audioEvents)
-                                {
-                                    if (audioEvent["clipName"] is JToken eventClipNameElement)
-                                    {
-                                        string clipName = eventClipNameElement.ToString();
-                                        if (!string.IsNullOrEmpty(clipName))
-                                        {
-                                            panelAudioUrls.Add($"{cleanBaseUrl}/SoundFX/{clipName}.ogg");
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    catch (JsonException jsonEx)
-                    {
-                        _logService.LogWarning($"[RiotAudioLoader] Error parsing JSON file '{fileName}': {jsonEx.Message}.");
-                    }
-                    catch (Exception fileEx)
-                    {
-                        _logService.LogError($"[RiotAudioLoader] Unexpected error while processing file '{fileName}': {fileEx.Message}.");
+                        
+                        _logService.LogDebug($"[RiotAudioLoader] Routing clip '{clipName}' to folder: {folder}");
+                        
+                        string fullUrl = $"{cleanBaseUrl}/{folder}/{clipName}.ogg";
+                        audioUrlsToDownload.Add(fullUrl);
                     }
                 }
-
-                if (letteringAudioUrls.Any())
-                {
-                    _logService.Log($"[RiotAudioLoader] Audios found on MotionComicLettering: {letteringAudioUrls.Count}");
-                }
-                if (panelAudioUrls.Any())
-                {
-                    _logService.Log($"[RiotAudioLoader] Audios found in MotionComicPanel: {panelAudioUrls.Count}");
-                }
-
-                var audioUrlsToDownload = new HashSet<string>(letteringAudioUrls.Concat(panelAudioUrls));
 
                 if (!audioUrlsToDownload.Any())
                 {
-                    _logService.Log("[RiotAudioLoader] No audio was found in any MotionComic files.");
+                    _logService.Log("[RiotAudioLoader] No audio clips found in JSON files.");
                     return;
                 }
 
-                _logService.Log($"[RiotAudioLoader] Found {audioUrlsToDownload.Count} total unique audio URLs. Starting download...");
+                _logService.Log($"[RiotAudioLoader] Found {audioUrlsToDownload.Count} unique audio assets. Starting download...");
 
                 foreach (var audioUrl in audioUrlsToDownload)
                 {
@@ -129,39 +86,31 @@ namespace RiftManager.Services
                     {
                         await _assetDownloader.DownloadAudio(audioUrl, audioSavePath);
                     }
-                    catch (HttpRequestException httpEx)
-                    {
-                        _logService.LogError($"[RiotAudioLoader] Error HTTP ({(int?)httpEx.StatusCode}) when downloading {Path.GetFileName(audioUrl)}: {httpEx.Message}");
-                    }
                     catch (Exception ex)
                     {
-                        _logService.LogError($"[RiotAudioLoader] Unexpected error while downloading {Path.GetFileName(audioUrl)}: {ex.GetType().Name} - {ex.Message}");
+                        _logService.LogError($"[RiotAudioLoader] Error downloading {Path.GetFileName(audioUrl)}: {ex.Message}");
                     }
-                    await Task.Delay(100);
                 }
                 
                 _logService.LogSuccess($"[RiotAudioLoader] Audio download process completed.");
             }
             catch (Exception ex)
             {
-                _logService.LogError($"[RiotAudioLoader] Fatal error while searching for audio files: {ex.Message}");
+                _logService.LogError($"[RiotAudioLoader] Fatal error during audio processing: {ex.Message}");
             }
         }
 
         private string CleanBaseUrl(string catalogBaseUrl)
         {
+            // catalogBaseUrl suele ser .../StreamingAssets/aa/
+            // Necesitamos llegar a .../StreamingAssets
             string baseUrl = catalogBaseUrl.TrimEnd('/');
-            
-            if (baseUrl.EndsWith("/WebGL", StringComparison.OrdinalIgnoreCase))
-            {
-                baseUrl = baseUrl[..^"/WebGL".Length];
-            }
             
             if (baseUrl.EndsWith("/aa", StringComparison.OrdinalIgnoreCase))
             {
                 baseUrl = baseUrl[..^"/aa".Length];
             }
-
+            
             return baseUrl;
         }
     }

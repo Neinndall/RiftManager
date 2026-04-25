@@ -29,7 +29,7 @@ namespace RiftManager.Interfaces
         /// <returns>Una lista de URLs de bundles.</returns>
         public List<string> ParseBundleUrlsFromCatalogJson(JToken rootToken, string assetBaseUrl, string metagameId = null)
         {
-            _logService.LogDebug($"[CatalogParser] ParseBundleUrlsFromCatalogJson called with Metagame ID: {metagameId ?? "N/A"}");
+            _logService.Log($"[CatalogParser] Starting parse with keywords: {metagameId ?? "N/A"}");
             List<string> bundleUrls = new List<string>();
 
             if (rootToken == null)
@@ -51,19 +51,16 @@ namespace RiftManager.Interfaces
 
                     if (internalPath.StartsWith("0#"))
                     {
-                        // Nuevo formato para 0#: Reemplaza "0#" y antepone la URL base.
                         pathForChecks = internalPath.Replace("0#", "WebGL/");
                         fullBundleUrl = assetBaseUrl + pathForChecks;
                     }
                     else if (internalPath.StartsWith("1#"))
                     {
-                        // Nuevo formato para 1#: Reemplaza "1#" y antepone una ruta específica.
                         pathForChecks = internalPath.Replace("1#", "WebGL/ui_assets_assets/prefabs/ui/");
                         fullBundleUrl = assetBaseUrl + pathForChecks;
                     }
                     else
                     {
-                        // Formato antiguo: Reemplaza el placeholder.
                         fullBundleUrl = internalPath.Replace("{UnityEngine.AddressableAssets.Addressables.RuntimePath}", assetBaseUrl);
                     }
 
@@ -75,22 +72,21 @@ namespace RiftManager.Interfaces
                         // Lógica de filtrado mejorada para bundles de cómics
                         if (fileName.StartsWith("comics_assets_mc_", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(metagameId))
                         {
-                            // Dividimos el metagameId (que ahora puede contener partes de la URL) y el nombre del archivo en palabras clave.
                             var contextKeywords = metagameId.ToLower().Split(new[] { '_' }, StringSplitOptions.RemoveEmptyEntries).Where(k => k.Length > 2).ToList();
-                            var fileNameKeywords = fileName.ToLower().Split(new[] { '_' }, StringSplitOptions.RemoveEmptyEntries).ToList();
 
-                            // Si no hay palabras clave de contexto, no filtramos.
                             if (contextKeywords.Any())
                             {
-                                // Comprobamos si alguna palabra clave del contexto coincide (parcial o totalmente) con alguna palabra clave del nombre del archivo.
-                                bool matchFound = contextKeywords.Any(contextKey =>
-                                    fileNameKeywords.Any(fileKey => fileKey.Contains(contextKey) || contextKey.Contains(fileKey))
-                                );
+                                bool matchFound = contextKeywords.Any(contextKey => fileName.Contains(contextKey));
 
                                 if (!matchFound)
                                 {
-                                    _logService.LogDebug($"[CatalogParser] Avoiding comic bundle '{fileName}' because it does not match the context keywords: '{metagameId}'.");
+                                    // Cambiado a Log para visibilidad total
+                                    _logService.Log($"[CatalogParser] SKIPPING: '{fileName}' (No match with keywords: {string.Join(", ", contextKeywords)})");
                                     continue;
+                                }
+                                else
+                                {
+                                    _logService.Log($"[CatalogParser] ACCEPTED: '{fileName}' (Match found!)");
                                 }
                             }
                         }
