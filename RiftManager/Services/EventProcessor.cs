@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using RiftManager.Models;
 using RiftManager.Services;
+using RiftManager.Interfaces;
 
 namespace RiftManager.Services
 {
@@ -16,19 +18,22 @@ namespace RiftManager.Services
         private readonly BundleService _bundleService;
         private readonly RiotAudioLoader _riotAudioLoader;
         private readonly EmbedAssetScraperService _embedAssetScraperService;
+        private readonly WebScraper _webScraper;
         
         public EventProcessor(
             AssetDownloader assetDownloader,
             LogService logService,
             BundleService bundleService,
             RiotAudioLoader riotAudioLoader,
-            EmbedAssetScraperService embedAssetScraperService)
+            EmbedAssetScraperService embedAssetScraperService,
+            WebScraper webScraper)
         {
             _assetDownloader = assetDownloader;
             _logService = logService;
             _bundleService = bundleService;
             _riotAudioLoader = riotAudioLoader;
             _embedAssetScraperService = embedAssetScraperService;
+            _webScraper = webScraper;
         }
 
         public async Task ProcessEventAsync(
@@ -39,6 +44,36 @@ namespace RiftManager.Services
             // Prepare the main URL for processing, which will be the user's choice or the only existing one.
             string urlToProcess = (selectedMainEventLink != null) ? selectedMainEventLink.Url : null;
             string metagameIdToProcess = (selectedMainEventLink != null) ? selectedMainEventLink.MetagameId : null;
+
+            // --- FORCE FRESH CATALOG FOR SELECTED LINK ---
+            if (!string.IsNullOrEmpty(urlToProcess))
+            {
+                // Limpiamos el locale para el scraper
+                string scrapUrl = urlToProcess.Contains("{locale}") ? urlToProcess.Replace("{locale}", "en-us") : urlToProcess;
+
+                // Si hay un link seleccionado, borramos el catálogo viejo para no heredar basura (ej: del comic1)
+                if (selectedMainEventLink != null)
+                {
+                    _logService.Log($"[EventProcessor] User selected a specific link. Clearing old catalog info and fetching fresh catalog for: {scrapUrl}");
+                    currentEvent.CatalogInformation = null;
+                }
+
+                // Si no tenemos catálogo (porque lo acabamos de borrar o no existía), buscamos el nuevo.
+                if (currentEvent.CatalogInformation == null)
+                {
+                    string newCatalogUrl = await _webScraper.GetCatalogBaseUrl(scrapUrl, selectedMainEventLink?.Title);
+                    if (newCatalogUrl != null)
+                    {
+                        _logService.LogSuccess($"[EventProcessor] Fresh catalog found: {newCatalogUrl}");
+                        string assetBaseUrlForBundles = newCatalogUrl.Replace("catalog.bin", "");
+                        currentEvent.CatalogInformation = new Models.CatalogData
+                        {
+                            BaseUrl = assetBaseUrlForBundles,
+                            CatalogJsonUrl = newCatalogUrl
+                        };
+                    }
+                }
+            }
 
             // --- START DETAILED LOG FOR THE SELECTED EVENT ---
             _logService.Log($"Processing Event: {currentEvent.Title} (ID: {currentEvent.NavigationItemId})");
@@ -73,12 +108,41 @@ namespace RiftManager.Services
             }
 
             // Logic for Bundles and Audios (Events with Catalog)
-            // Preparamos un ID de filtrado más completo, combinando el Metagame ID y la URL del evento.
+            // Preparamos un ID de filtrado más completo recolectando metadatos de TODO el evento
             var filterKeywordsList = new List<string>();
-            if (!string.IsNullOrEmpty(metagameIdToProcess))
+            
+            // 1. Incluimos palabras del título del evento descompuestas
+            if (!string.IsNullOrEmpty(currentEvent.Title))
             {
-                filterKeywordsList.Add(metagameIdToProcess);
+                var titleWords = Regex.Split(currentEvent.Title, @"[^a-zA-Z0-9]").Where(w => w.Length > 2);
+                filterKeywordsList.AddRange(titleWords);
             }
+
+            // 2. Incluimos el ID de navegación descompuesto
+            if (!string.IsNullOrEmpty(currentEvent.NavigationItemId))
+            {
+                var navWords = currentEvent.NavigationItemId.Split('-').Where(w => w.Length > 2);
+                filterKeywordsList.AddRange(navWords);
+            }
+
+            // 3. ¡IMPORTANTE! Incluimos los Metagame IDs y Títulos de TODOS los links del evento
+            if (currentEvent.MainEventLinks != null)
+            {
+                foreach (var link in currentEvent.MainEventLinks)
+                {
+                    if (!string.IsNullOrEmpty(link.MetagameId))
+                    {
+                        filterKeywordsList.Add(link.MetagameId);
+                    }
+                    if (!string.IsNullOrEmpty(link.Title))
+                    {
+                        var linkTitleWords = Regex.Split(link.Title, @"[^a-zA-Z0-9]").Where(w => w.Length > 2);
+                        filterKeywordsList.AddRange(linkTitleWords);
+                    }
+                }
+            }
+
+            // 4. Incluimos partes de la URL seleccionada
             if (!string.IsNullOrEmpty(urlToProcess))
             {
                 try
@@ -95,6 +159,7 @@ namespace RiftManager.Services
                     _logService.LogWarning($"[EventProcessor] URL con formato inválido al preparar palabras clave de filtrado: {urlToProcess}");
                 }
             }
+            
             var filterKeywords = string.Join("_", filterKeywordsList.Distinct());
             _logService.LogDebug($"[EventProcessor] Combined filtering keywords: {filterKeywords}");
 
@@ -107,13 +172,6 @@ namespace RiftManager.Services
             // --- LOG OF THE MAIN URL TO BE PROCESSED ---
             if (!string.IsNullOrEmpty(urlToProcess))
             {
-                // Replace {locale} with en-us if present
-                if (urlToProcess.Contains("{locale}"))
-                {
-                    urlToProcess = urlToProcess.Replace("{locale}", "en-us");
-                    _logService.LogWarning($"[EventProcessor] Replaced {{locale}} with en-us in main URL: {urlToProcess}");
-                }
-
                 _logService.Log($"Main URL to process: {urlToProcess}" +
                                  (!string.IsNullOrEmpty(metagameIdToProcess) ? $" (Metagame ID: {metagameIdToProcess})": "") +
                                  (!string.IsNullOrEmpty(selectedMainEventLink?.Title) ? $" (Link Title: {selectedMainEventLink.Title})": ""));
@@ -163,7 +221,7 @@ namespace RiftManager.Services
                 }
                 else
                 {
-                    _logService.LogWarning($"[EventProcessor] Event '{currentEvent.Title}' does not contain catalog.json or valid main URLs to process advanced assets.");
+                    _logService.LogWarning($"[EventProcessor] Event '{currentEvent.Title}' does not contain catalog.bin or valid main URLs to process advanced assets.");
                 }
             }
 

@@ -52,7 +52,7 @@ namespace RiftManager.Services
             string tempDir = _directoriesCreator.CreateTemporaryDirectory();
             string binPath = Path.Combine(tempDir, "catalog.bin");
             string jsonPath = Path.Combine(tempDir, "catalog.json");
-            string exePath = Path.Combine(tempDir, "bintojson.exe");
+            string exePath = Path.Combine(tempDir, "BinToJson.exe");
 
             try
             {
@@ -68,13 +68,13 @@ namespace RiftManager.Services
                 }
                 _logService.LogDebug($"[BundleService] Catalog.bin downloaded to: {binPath}");
 
-                // Step 2: Extract bintojson.exe from embedded resource
+                // Step 2: Extract BinToJson.exe from embedded resource
                 var assembly = Assembly.GetExecutingAssembly();
-                using (Stream stream = assembly.GetManifestResourceStream("RiftManager.Resources.bintojson.exe"))
+                using (Stream stream = assembly.GetManifestResourceStream("RiftManager.Resources.BinToJson.exe"))
                 {
                     if (stream == null)
                     {
-                        _logService.LogError("[BundleService] Could not find embedded resource 'bintojson.exe'.");
+                        _logService.LogError("[BundleService] Could not find embedded resource 'BinToJson.exe'.");
                         return bundleUrls;
                     }
                     using (var fileStream = new FileStream(exePath, FileMode.Create, FileAccess.Write))
@@ -82,13 +82,13 @@ namespace RiftManager.Services
                         await stream.CopyToAsync(fileStream);
                     }
                 }
-                _logService.LogDebug($"[BundleService] bintojson.exe extracted to: {exePath}");
+                _logService.LogDebug($"[BundleService] BinToJson.exe extracted to: {exePath}");
 
                 // Step 3: Execute conversion
                 using (Process process = new Process())
                 {
                     process.StartInfo.FileName = exePath;
-                    process.StartInfo.Arguments = $"convert \"{binPath}\" \"{jsonPath}\"";
+                    process.StartInfo.Arguments = $"\"{binPath}\" \"{jsonPath}\"";
                     process.StartInfo.UseShellExecute = false;
                     process.StartInfo.CreateNoWindow = true;
                     process.StartInfo.RedirectStandardOutput = true;
@@ -101,7 +101,7 @@ namespace RiftManager.Services
 
                     if (process.ExitCode != 0)
                     {
-                        _logService.LogError($"[BundleService] bintojson.exe failed with code {process.ExitCode}. Error: {error}");
+                        _logService.LogError($"[BundleService] BinToJson.exe failed with code {process.ExitCode}. Error: {error}");
                         return bundleUrls;
                     }
                     _logService.LogDebug($"[BundleService] .bin to .json conversion complete. Output: {output}");
