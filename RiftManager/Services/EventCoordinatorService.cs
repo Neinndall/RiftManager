@@ -15,6 +15,7 @@ namespace RiftManager.Services
         private readonly NavigationParser _navigationParser;
         private readonly DetailPageParser _detailPageParser;
         private readonly WebScraper _webScraper;
+        private readonly TftEventService _tftEventService;
         private readonly BundleService _bundleService;
         private readonly LogService _logService;
         private readonly string _baseUrlV2 = "https://content.publishing.riotgames.com/publishing-content/v2.0/public/channel/league_of_legends_client";
@@ -24,6 +25,7 @@ namespace RiftManager.Services
             NavigationParser NavigationParser,
             DetailPageParser DetailPageParser,
             WebScraper WebScraper,
+            TftEventService tftEventService,
             BundleService bundleService,
             LogService logService)
         {
@@ -31,6 +33,7 @@ namespace RiftManager.Services
             _navigationParser = NavigationParser;
             _detailPageParser = DetailPageParser;
             _webScraper = WebScraper;
+            _tftEventService = tftEventService;
             _bundleService = bundleService;
             _logService = logService;
         }
@@ -39,110 +42,123 @@ namespace RiftManager.Services
         {
             Dictionary<string, EventDetails> eventData = new Dictionary<string, EventDetails>();
 
+            // 1. First, get the standard events
             JToken document = await _jsonFetcherService.GetJTokenAsync(navigationUrl, suppressConsoleOutput: true);
-            if (document == null)
+            if (document != null)
             {
-                _logService.LogWarning("[EventCoordinatorService] The navigation JSON document could not be retrieved. Please ensure the URL is correct or there is a connection.");
-                return eventData;
-            }
-
-            JToken dataToken = document["data"];
-            if (dataToken != null && dataToken.Type == JTokenType.Array)
-            {
-                foreach (JToken eventElement in dataToken)
+                JToken dataToken = document["data"];
+                if (dataToken != null && dataToken.Type == JTokenType.Array)
                 {
-                    string navigationItemId = eventElement.Value<string>("navigationItemID");
-                    string eventTitle = eventElement.Value<string>("title");
-
-                    if (!string.IsNullOrEmpty(navigationItemId) && !string.IsNullOrEmpty(eventTitle))
+                    foreach (JToken eventElement in dataToken)
                     {
-                        EventDetails currentEvent = new EventDetails(eventTitle, navigationItemId);
+                        string navigationItemId = eventElement.Value<string>("navigationItemID");
+                        string eventTitle = eventElement.Value<string>("title");
 
-                        string fullCatalogJsonUrl = null;
-
-                        // 1. Obtener la MainEventUrl del propio elemento de navegación inicial (si es de tipo 'iframed')
-                        string navMainUrl = _navigationParser.GetMainEventUrlFromNavigationItem(eventElement);
-                        if (navMainUrl != null)
+                        if (!string.IsNullOrEmpty(navigationItemId) && !string.IsNullOrEmpty(eventTitle))
                         {
-                            currentEvent.MainEventUrl = navMainUrl;
-                            currentEvent.HasMainEmbedUrl = true;
+                            EventDetails currentEvent = new EventDetails(eventTitle, navigationItemId);
 
-                            // Añade la URL principal encontrada en la navegación a la lista MainEventLinks.
-                            currentEvent.MainEventLinks.Add(new MainEventLink(navMainUrl)
+                            string fullCatalogJsonUrl = null;
+
+                            // 1. Obtener la MainEventUrl del propio elemento de navegación inicial (si es de tipo 'iframed')
+                            string navMainUrl = _navigationParser.GetMainEventUrlFromNavigationItem(eventElement);
+                            if (navMainUrl != null)
                             {
-                                Title = eventTitle, // Usa el título del evento como título predeterminado
-                                MetagameId = null // No hay MetagameId en este nivel de la navegación
-                            });
+                                currentEvent.MainEventUrl = navMainUrl;
+                                currentEvent.HasMainEmbedUrl = true;
 
-                            currentEvent.CatalogInformation = null; // Se procesará bajo demanda en EventProcessor
-                        }
-
-                        currentEvent.BackgroundUrl = eventElement.SelectToken("background.url")?.ToString();
-                        currentEvent.IconUrl = eventElement.SelectToken("icon.url")?.ToString();
-
-                        bool requiresDetailPageFetch = true;
-                        if (navigationItemId.Equals("info-hub", StringComparison.OrdinalIgnoreCase) ||
-                            navigationItemId.Equals("lol-patch-notes", StringComparison.OrdinalIgnoreCase))
-                        {
-                            requiresDetailPageFetch = false;
-                        }
-
-                        if (requiresDetailPageFetch)
-                        {
-                            string eventDataUrl = $"{_baseUrlV2}/page/{navigationItemId}";
-                            JToken eventDetailsToken = await _jsonFetcherService.GetJTokenAsync(eventDataUrl, suppressConsoleOutput: true);
-                            if (eventDetailsToken != null)
-                            {
-                                // Asegúrate de que DetailPageParser SIEMPRE se llame para buscar enlaces adicionales,
-                                // sin importar si ya encontramos uno en la navegación inicial.
-                                List<MainEventLink> detailPageMainLinks = _detailPageParser.GetMainEventUrlsFromDetailPage(eventDetailsToken, currentEvent);
-
-                                // Agrega los enlaces de la página de detalle, evitando duplicados.
-                                foreach (var link in detailPageMainLinks)
+                                // Añade la URL principal encontrada en la navegación a la lista MainEventLinks.
+                                currentEvent.MainEventLinks.Add(new MainEventLink(navMainUrl)
                                 {
-                                    if (!currentEvent.MainEventLinks.Any(l => l.Url.Equals(link.Url, StringComparison.OrdinalIgnoreCase)))
-                                    {
-                                        currentEvent.MainEventLinks.Add(link);
-                                    }
-                                }
+                                    Title = eventTitle, // Usa el título del evento como título predeterminado
+                                    MetagameId = null // No hay MetagameId en este nivel de la navegación
+                                });
 
-                                // Si después de ambos chequeos (navegación y detalle) hay enlaces, actualiza HasMainEmbedUrl
-                                currentEvent.HasMainEmbedUrl = currentEvent.MainEventLinks.Any();
-
-                                // Si MainEventUrl aún no está establecido y hay enlaces en la lista, usa el primero.
-                                if (currentEvent.MainEventUrl == null && currentEvent.MainEventLinks.Any())
-                                {
-                                    currentEvent.MainEventUrl = currentEvent.MainEventLinks.First().Url;
-                                }
-
-                                if (fullCatalogJsonUrl == null && currentEvent.MainEventUrl != null)
-                                {
-                                    // Pasa el título del primer MainEventLink si existe, de lo contrario null.
-                                    string titleForCatalog = currentEvent.MainEventLinks.Any() ? currentEvent.MainEventLinks.First().Title : null;
-                                    fullCatalogJsonUrl = await _webScraper.GetCatalogBaseUrl(currentEvent.MainEventUrl, titleForCatalog);
-                                    if (fullCatalogJsonUrl != null)
-                                    {
-                                        string assetBaseUrlForBundles = fullCatalogJsonUrl.Replace("catalog.bin", "");
-                                        currentEvent.CatalogInformation = new Models.CatalogData
-                                        {
-                                            BaseUrl = assetBaseUrlForBundles,
-                                            CatalogJsonUrl = fullCatalogJsonUrl
-                                        };
-                                    }
-                                }
-
-                                currentEvent.AdditionalAssetUrls.AddRange(_detailPageParser.ExtractAdditionalAssetsUrls(eventDetailsToken));
+                                currentEvent.CatalogInformation = null; // Se procesará bajo demanda en EventProcessor
                             }
-                        }
 
-                        eventData.Add(navigationItemId, currentEvent);
+                            currentEvent.BackgroundUrl = eventElement.SelectToken("background.url")?.ToString();
+                            currentEvent.IconUrl = eventElement.SelectToken("icon.url")?.ToString();
+
+                            bool requiresDetailPageFetch = true;
+                            if (navigationItemId.Equals("info-hub", StringComparison.OrdinalIgnoreCase) ||
+                                navigationItemId.Equals("lol-patch-notes", StringComparison.OrdinalIgnoreCase))
+                            {
+                                requiresDetailPageFetch = false;
+                            }
+
+                            if (requiresDetailPageFetch)
+                            {
+                                string eventDataUrl = $"{_baseUrlV2}/page/{navigationItemId}";
+                                JToken eventDetailsToken = await _jsonFetcherService.GetJTokenAsync(eventDataUrl, suppressConsoleOutput: true);
+                                if (eventDetailsToken != null)
+                                {
+                                    // Asegúrate de que DetailPageParser SIEMPRE se llame para buscar enlaces adicionales,
+                                    // sin importar si ya encontramos uno en la navegación inicial.
+                                    List<MainEventLink> detailPageMainLinks = _detailPageParser.GetMainEventUrlsFromDetailPage(eventDetailsToken, currentEvent);
+
+                                    // Agrega los enlaces de la página de detalle, evitando duplicados.
+                                    foreach (var link in detailPageMainLinks)
+                                    {
+                                        if (!currentEvent.MainEventLinks.Any(l => l.Url.Equals(link.Url, StringComparison.OrdinalIgnoreCase)))
+                                        {
+                                            currentEvent.MainEventLinks.Add(link);
+                                        }
+                                    }
+
+                                    // Si después de ambos chequeos (navegación y detalle) hay enlaces, actualiza HasMainEmbedUrl
+                                    currentEvent.HasMainEmbedUrl = currentEvent.MainEventLinks.Any();
+
+                                    // Si MainEventUrl aún no está establecido y hay enlaces en la lista, usa el primero.
+                                    if (currentEvent.MainEventUrl == null && currentEvent.MainEventLinks.Any())
+                                    {
+                                        currentEvent.MainEventUrl = currentEvent.MainEventLinks.First().Url;
+                                    }
+
+                                    if (fullCatalogJsonUrl == null && currentEvent.MainEventUrl != null)
+                                    {
+                                        // Pasa el título del primer MainEventLink si existe, de lo contrario null.
+                                        string titleForCatalog = currentEvent.MainEventLinks.Any() ? currentEvent.MainEventLinks.First().Title : null;
+                                        fullCatalogJsonUrl = await _webScraper.GetCatalogBaseUrl(currentEvent.MainEventUrl, titleForCatalog);
+                                        if (fullCatalogJsonUrl != null)
+                                        {
+                                            string assetBaseUrlForBundles = fullCatalogJsonUrl.Replace("catalog.bin", "");
+                                            currentEvent.CatalogInformation = new Models.CatalogData
+                                            {
+                                                BaseUrl = assetBaseUrlForBundles,
+                                                CatalogJsonUrl = fullCatalogJsonUrl
+                                            };
+                                        }
+                                    }
+
+                                    currentEvent.AdditionalAssetUrls.AddRange(_detailPageParser.ExtractAdditionalAssetsUrls(eventDetailsToken));
+                                }
+                            }
+
+                            eventData.Add(navigationItemId, currentEvent);
+                        }
                     }
+                }
+                else
+                {
+                    _logService.LogWarning("[EventCoordinatorService] The navigation JSON document does not contain the 'data' property as an array. Normal events could not be loaded.");
                 }
             }
             else
             {
-                _logService.LogWarning("[EventCoordinatorService] The navigation JSON document does not contain the 'data' property as an array. Events could not be loaded.");
+                _logService.LogWarning("[EventCoordinatorService] The navigation JSON document could not be retrieved. Normal events could not be loaded.");
             }
+
+            // 2. Second, get TFT events from Client Config
+            var tftEvents = await _tftEventService.GetTftEventsAsync();
+            foreach (var tftEvent in tftEvents)
+            {
+                if (!eventData.ContainsKey(tftEvent.NavigationItemId))
+                {
+                    eventData.Add(tftEvent.NavigationItemId, tftEvent);
+                }
+            }
+
             return eventData;
         }
     }
