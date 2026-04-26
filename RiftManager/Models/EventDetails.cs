@@ -7,6 +7,17 @@ namespace RiftManager.Models
         public string Title { get; set; }
         public string NavigationItemId { get; set; }
 
+        public string DisplayType
+        {
+            get
+            {
+                string type = "";
+                if (CatalogInformation != null) type += "Catalog ";
+                if (HasMainEmbedUrl) type += "Embed ";
+                return string.IsNullOrWhiteSpace(type) ? "N/A" : type.Trim();
+            }
+        }
+
         public EventDetails(string title, string navigationItemId)
         {
             Title = title;

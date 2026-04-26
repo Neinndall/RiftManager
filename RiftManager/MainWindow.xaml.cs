@@ -25,9 +25,12 @@ namespace RiftManager
         private Dictionary<string, EventDetails> _allEventData = new Dictionary<string, EventDetails>();
         private EventDetails _selectedEvent;
 
+        public string AppVersion => ApplicationInfos.FormattedVersion;
+
         public MainWindow(LogService logService, EventCoordinatorService eventService, EventProcessor eventProcessor, RiotClientManifestService riotClientManifestService)
         {
             InitializeComponent();
+            DataContext = this;
             LogRichTextBox.Document = new FlowDocument();
 
             // Initialize fields from injected services
@@ -239,14 +242,10 @@ namespace RiftManager
                     EventTitleTextBlock.Text = selectedEvent.Title;
                     EventIdTextBlock.Text = selectedEvent.NavigationItemId;
 
-                    // Update Event Type
-                    string eventType = "";
-                    _logService.LogDebug($"EventsListView_SelectionChanged: Checking CatalogInformation (is null? {selectedEvent.CatalogInformation == null})");
-                    if (selectedEvent.CatalogInformation != null) eventType += "Catalog (Unity Bundles) ";
-                    _logService.LogDebug($"EventsListView_SelectionChanged: Checking HasMainEmbedUrl (is {selectedEvent.HasMainEmbedUrl})");
-                    if (selectedEvent.HasMainEmbedUrl) eventType += "Embed (Web Content) ";
-                    EventTypeTextBlock.Text = string.IsNullOrWhiteSpace(eventType) ? "N/A" : eventType.Trim();
-                    _logService.LogDebug($"EventsListView_SelectionChanged: Event type determined: {EventTypeTextBlock.Text}");
+                    // Update Technical Info
+                    EventTypeTextBlock.Text = selectedEvent.DisplayType;
+                    EventNavIdTextBlock.Text = selectedEvent.NavigationItemId;
+                    EventUrlTextBlock.Text = selectedEvent.MainEventUrl ?? "N/A";
 
                     // Update Main Event Links
                     _logService.LogDebug($"EventsListView_SelectionChanged: Checking MainEventLinks (is null? {selectedEvent.MainEventLinks == null}, Count: {selectedEvent.MainEventLinks?.Count ?? 0})");
@@ -331,6 +330,16 @@ namespace RiftManager
                 cm.PlacementTarget = clickedButton;
                 cm.IsOpen = true;
             }
+        }
+
+        private void Minimize_Click(object sender, RoutedEventArgs e)
+        {
+            SystemCommands.MinimizeWindow(this);
+        }
+
+        private void Close_Click(object sender, RoutedEventArgs e)
+        {
+            SystemCommands.CloseWindow(this);
         }
     }
 }
