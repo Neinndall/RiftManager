@@ -97,14 +97,11 @@
                                 </LinearGradientBrush>
                             </Grid.Background>
                             <StackPanel VerticalAlignment="Bottom" Margin="30">
-                                <TextBlock x:Name="EventIdTextBlock" Text="EVENT_ID" Foreground="{StaticResource AccentBrush}" 
-                                           FontSize="11" FontWeight="Bold" Margin="0,0,0,6"/>
                                 <TextBlock x:Name="EventTitleTextBlock" Text="Event Title" FontSize="32" 
                                            FontWeight="Bold" Foreground="White" TextWrapping="Wrap"/>
                             </StackPanel>
-                        </Grid>
-                    </Border>
-
+                            </Grid>
+                            </Border>
                     <!-- Panel de Info y Acciones (Bottom Rounded) -->
                     <Border Grid.Row="1" Background="#252526" Padding="30,25" CornerRadius="0,0,11,11">
                         <Grid>
@@ -124,19 +121,13 @@
                                     <TextBlock x:Name="EventNavIdTextBlock" Text="N/A" Foreground="White" FontSize="10" FontWeight="SemiBold"/>
                                 </StackPanel>
 
-                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                                    <TextBlock Text="BASE URL" Foreground="{StaticResource TextLabel}" FontSize="10" FontWeight="Bold" Width="120"/>
-                                    <TextBlock x:Name="EventUrlTextBlock" Text="N/A" Foreground="{StaticResource TextSecondary}" FontSize="10" FontWeight="Medium" TextWrapping="Wrap"/>
-                                </StackPanel>
-
-                                <StackPanel x:Name="MainLinksHeader" Visibility="Collapsed" Margin="0,15,0,0">
-                                    <TextBlock Text="CONTEXT LINKS" Foreground="{StaticResource TextLabel}" FontSize="10" FontWeight="Bold" Margin="0,0,0,10"/>
+                                <StackPanel x:Name="MainLinksHeader" Visibility="Collapsed" Margin="0,15,0,0">                                    <TextBlock Text="CONTEXT LINKS" Foreground="{StaticResource TextLabel}" FontSize="10" FontWeight="Bold" Margin="0,0,0,10"/>
                                     <ItemsControl x:Name="MainEventLinksList">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate>
                                                 <TextBlock Margin="0,0,0,4" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis">
                                                     <Run Text="- " Foreground="{StaticResource AccentBrush}"/>
-                                                    <Run Text="{Binding Title}" Foreground="White" FontSize="11" FontWeight="Bold"/>
+                                                    <Run Text="{Binding DisplayName, Mode=OneWay}" Foreground="White" FontSize="11" FontWeight="Bold"/>
                                                     <Run Text=" (" Foreground="{StaticResource TextSecondary}" FontSize="10"/>
                                                     <Run Text="{Binding Url}" Foreground="{StaticResource TextSecondary}" FontSize="10"/>
                                                     <Run Text=")" Foreground="{StaticResource TextSecondary}" FontSize="10"/>

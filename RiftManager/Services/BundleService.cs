@@ -143,14 +143,11 @@ namespace RiftManager.Services
             return bundleUrls;
         }
 
-        public async Task ExtractAssetsForEvent(string eventNavigationItemId, string assetsRootFolderPath)
+        public async Task ExtractAssetsForEvent(string eventIdentifier, string bundlesInputPath, string assetsOutputPath)
         {
-            string bundlesInputPath = Path.Combine(assetsRootFolderPath, eventNavigationItemId, "Bundles");
-            string assetsOutputPath = Path.Combine(assetsRootFolderPath, eventNavigationItemId, "ExtractedAssets");
-
             if (!Directory.Exists(bundlesInputPath))
             {
-                _logService.LogWarning($"[BundleService] No bundles found in {bundlesInputPath}. Skipping asset extraction for {eventNavigationItemId}.");
+                _logService.LogWarning($"[BundleService] No bundles found in {bundlesInputPath}. Skipping asset extraction for {eventIdentifier}.");
                 return;
             }
 
@@ -171,7 +168,7 @@ namespace RiftManager.Services
                     return;
                 }
 
-                _logService.Log($"[BundleService] Starting bundle asset extraction for {eventNavigationItemId}");
+                _logService.Log($"[BundleService] Starting bundle asset extraction for {eventIdentifier}");
                 string arguments = $"\"{bundlesInputPath}\" -o \"{assetsOutputPath}\"";
                 
                 using (Process process = new Process())
@@ -186,7 +183,7 @@ namespace RiftManager.Services
                     {
                         if (!string.IsNullOrEmpty(e.Data))
                         {
-                            _logService.LogError($"[BundleService] AssetStudio error for {eventNavigationItemId}: {e.Data}");
+                            _logService.LogError($"[BundleService] AssetStudio error for {eventIdentifier}: {e.Data}");
                         }
                     };
 
@@ -196,17 +193,17 @@ namespace RiftManager.Services
 
                     if (process.ExitCode == 0)
                     {
-                        _logService.LogSuccess($"BundleService: Bundle asset extraction for '{eventNavigationItemId}' completed successfully.");
+                        _logService.LogSuccess($"BundleService: Bundle asset extraction for '{eventIdentifier}' completed successfully.");
                     }
                     else
                     {
-                        _logService.LogError($"BundleService: AssetStudio finished with exit code {process.ExitCode} for '{eventNavigationItemId}'. There might be errors.");
+                        _logService.LogError($"BundleService: AssetStudio finished with exit code {process.ExitCode} for '{eventIdentifier}'. There might be errors.");
                     }
                 }
             }
             catch (Exception ex)
             {
-                _logService.LogError($"BundleService: Error executing AssetStudio for '{eventNavigationItemId}': {ex.Message}");
+                _logService.LogError($"BundleService: Error executing AssetStudio for '{eventIdentifier}': {ex.Message}");
             }
             finally
             {

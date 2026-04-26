@@ -36,7 +36,7 @@ namespace RiftManager.Services
             _webScraper = webScraper;
         }
 
-        public async Task ProcessEventAsync(
+        public async Task<string> ProcessEventAsync(
             EventDetails currentEvent,
             string assetsRootFolderPath,
             MainEventLink selectedMainEventLink = null)
@@ -163,6 +163,16 @@ namespace RiftManager.Services
             var filterKeywords = string.Join("_", filterKeywordsList.Distinct());
             _logService.LogDebug($"[EventProcessor] Combined filtering keywords: {filterKeywords}");
 
+            // --- DETERMINE BASE PATH FOR EXTRACCION ---
+            // Si hay un metagameId, lo usamos como subcarpeta dentro del navigationItemId
+            string eventBaseDir = Path.Combine(assetsRootFolderPath, currentEvent.NavigationItemId);
+            if (!string.IsNullOrEmpty(selectedMainEventLink?.MetagameId))
+            {
+                eventBaseDir = Path.Combine(eventBaseDir, selectedMainEventLink.MetagameId);
+                _logService.LogDebug($"[EventProcessor] Using metagame subfolder: {selectedMainEventLink.MetagameId}");
+            }
+            Directory.CreateDirectory(eventBaseDir);
+
             List<string> fetchedBundleUrls = await _bundleService.GetBundleUrlsFromCatalog(
                     currentEvent.CatalogInformation?.CatalogJsonUrl ?? string.Empty,
                     currentEvent.CatalogInformation?.BaseUrl ?? string.Empty,
@@ -184,7 +194,7 @@ namespace RiftManager.Services
 
             if (fetchedBundleUrls != null && fetchedBundleUrls.Any())
             {
-                string bundlesSavePath = Path.Combine(assetsRootFolderPath, currentEvent.NavigationItemId, "Bundles");
+                string bundlesSavePath = Path.Combine(eventBaseDir, "Bundles");
                 Directory.CreateDirectory(bundlesSavePath);
 
                 foreach (string bundleUrl in fetchedBundleUrls)
@@ -199,9 +209,13 @@ namespace RiftManager.Services
                     }
                 }
 
-                string extractedAssetsPath = Path.Combine(assetsRootFolderPath, currentEvent.NavigationItemId, "ExtractedAssets");
+                string extractedAssetsPath = Path.Combine(eventBaseDir, "ExtractedAssets");
                 Directory.CreateDirectory(extractedAssetsPath);
-                await _bundleService.ExtractAssetsForEvent(currentEvent.NavigationItemId, assetsRootFolderPath);
+                
+                await _bundleService.ExtractAssetsForEvent(
+                    selectedMainEventLink?.MetagameId ?? currentEvent.NavigationItemId, 
+                    bundlesSavePath, 
+                    extractedAssetsPath);
 
                 string audioSavePath = Path.Combine(extractedAssetsPath, "Audio");
                 await _riotAudioLoader.ProcessAndDownloadAudioUrls(
@@ -215,7 +229,7 @@ namespace RiftManager.Services
                 if (!string.IsNullOrEmpty(urlToProcess)) // Use the selected or only available URL
                 {
                     _logService.Log($"[EventProcessor] Attempting to get assets from main URL: {urlToProcess}");
-                    string embedScraperTempDir = Path.Combine(assetsRootFolderPath, currentEvent.NavigationItemId, "EmbedScrapedContent");
+                    string embedScraperTempDir = Path.Combine(eventBaseDir, "EmbedScrapedContent");
                     Directory.CreateDirectory(embedScraperTempDir);
                     await _embedAssetScraperService.HandleEmbedEventAsync(urlToProcess, embedScraperTempDir);
                 }
@@ -225,24 +239,20 @@ namespace RiftManager.Services
                 }
             }
 
-            // --- Save path configuration (ensure they exist) ---
-            string eventAssetsFolderPath = Path.Combine(assetsRootFolderPath, currentEvent.NavigationItemId);
-            Directory.CreateDirectory(eventAssetsFolderPath);
-
             // Logic for downloading main assets (background images, icons, additional assets)
             if (!string.IsNullOrEmpty(currentEvent.BackgroundUrl))
             {
-                await _assetDownloader.DownloadAsset(currentEvent.BackgroundUrl, eventAssetsFolderPath);
+                await _assetDownloader.DownloadAsset(currentEvent.BackgroundUrl, eventBaseDir);
             }
 
             if (!string.IsNullOrEmpty(currentEvent.IconUrl))
             {
-                await _assetDownloader.DownloadAsset(currentEvent.IconUrl, eventAssetsFolderPath);
+                await _assetDownloader.DownloadAsset(currentEvent.IconUrl, eventBaseDir);
             }
 
             if (currentEvent.AdditionalAssetUrls.Any())
             {
-                string additionalAssetsDestinationFolder = Path.Combine(eventAssetsFolderPath, "AdditionalAssets");
+                string additionalAssetsDestinationFolder = Path.Combine(eventBaseDir, "AdditionalAssets");
                 Directory.CreateDirectory(additionalAssetsDestinationFolder);
                 _logService.Log($"[EventProcessor] Downloading {currentEvent.AdditionalAssetUrls.Count} additional assets...");
 
@@ -270,6 +280,8 @@ namespace RiftManager.Services
                     }
                 }
             }
+
+            return eventBaseDir;
         }
     }
 }
