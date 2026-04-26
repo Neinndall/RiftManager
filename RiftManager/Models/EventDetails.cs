@@ -53,6 +53,17 @@ namespace RiftManager.Models
         public string MetagameId { get; set; }
         public string Title { get; set; }
 
+        public string DisplayName
+        {
+            get
+            {
+                if (!string.IsNullOrEmpty(Title) && !string.IsNullOrEmpty(MetagameId))
+                    return $"{Title} | {MetagameId}";
+                
+                return Title ?? MetagameId ?? "Unknown Link";
+            }
+        }
+
         public MainEventLink(string url)
         {
             Url = url;

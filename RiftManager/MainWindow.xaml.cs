@@ -196,14 +196,13 @@ namespace RiftManager
                     if (selectedLink != null || (eventDetails.MainEventLinks == null || !eventDetails.MainEventLinks.Any()))
                     {
                         _logService.LogDebug($"DownloadButton_Click: Processing event with selectedLink: {selectedLink?.Url ?? "N/A"}");
-                        await _eventProcessor.ProcessEventAsync(eventDetails, assetsFolderPath, selectedLink);
+                        string finalDownloadPath = await _eventProcessor.ProcessEventAsync(eventDetails, assetsFolderPath, selectedLink);
 
                         string baseDirForRelativePath = AppDomain.CurrentDomain.BaseDirectory;
                         _logService.LogDebug($"DownloadButton_Click: Removing empty directories in {assetsFolderPath}");
                         await FileSystemHelper.RemoveEmptyDirectories(assetsFolderPath, _logService, baseDirForRelativePath);
 
-                        string eventAssetsFolderPath = Path.Combine(assetsFolderPath, eventDetails.NavigationItemId);
-                        _logService.LogInteractiveSuccess($"Download finished for event: ", eventDetails.Title, eventAssetsFolderPath);
+                        _logService.LogInteractiveSuccess($"Download finished for event: ", eventDetails.Title, finalDownloadPath);
                         _logService.LogDebug($"DownloadButton_Click: Download completed for event: {eventDetails.Title}");
                     }
                     else
@@ -240,12 +239,10 @@ namespace RiftManager
                     _selectedEvent = selectedEvent;
                     EventDetailsPanel.Visibility = Visibility.Visible;
                     EventTitleTextBlock.Text = selectedEvent.Title;
-                    EventIdTextBlock.Text = selectedEvent.NavigationItemId;
 
                     // Update Technical Info
                     EventTypeTextBlock.Text = selectedEvent.DisplayType;
                     EventNavIdTextBlock.Text = selectedEvent.NavigationItemId;
-                    EventUrlTextBlock.Text = selectedEvent.MainEventUrl ?? "N/A";
 
                     // Update Main Event Links
                     _logService.LogDebug($"EventsListView_SelectionChanged: Checking MainEventLinks (is null? {selectedEvent.MainEventLinks == null}, Count: {selectedEvent.MainEventLinks?.Count ?? 0})");
