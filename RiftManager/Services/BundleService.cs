@@ -191,9 +191,19 @@ namespace RiftManager.Services
                     process.BeginErrorReadLine();
                     await process.WaitForExitAsync();
 
+                    bool hasFiles = Directory.Exists(assetsOutputPath) && Directory.GetFiles(assetsOutputPath, "*", SearchOption.AllDirectories).Length > 0;
+
                     if (process.ExitCode == 0)
                     {
-                        _logService.LogSuccess($"BundleService: Bundle asset extraction for '{eventIdentifier}' completed successfully.");
+                        if (hasFiles)
+                        {
+                            _logService.LogSuccess($"BundleService: Bundle asset extraction for '{eventIdentifier}' completed successfully.");
+                        }
+                        else
+                        {
+                            _logService.LogWarning($"BundleService: AssetStudio finished with code 0 but NO files were extracted to '{assetsOutputPath}'. This usually happens due to spaces, special characters, or very long paths (MAX_PATH) in the project directory.");
+                            _logService.LogWarning("[BundleService] Suggestion: Move the project to a shorter path like 'C:\\RiftManager' and avoid spaces or commas in folder names.");
+                        }
                     }
                     else
                     {
