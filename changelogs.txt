@@ -1,0 +1,126 @@
+RiftManager | v1.1.0.2
+
+# HOTFIX UPDATE
+This update focuses on improving the organization of downloaded assets for complex events.
+
+# IMPROVEMENTS
+
+# BUG FIXES
+   * Fixed additional asset detection in DetailPageParser to handle Riot CDN URLs with query parameters (e.g., `?accountingTag=LoL`). The extension check now uses `Uri.LocalPath` instead of raw string matching, ensuring `.png`, `.jpg`, and `.svg` assets from detail pages are correctly discovered and downloaded.
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+RiftManager | v1.1.0.1
+
+# HOTFIX UPDATE
+This update focuses on fine-tuning the new HUD interface and improving the organization of downloaded assets for complex events.
+
+# IMPROVEMENTS
+   * Hierarchical Asset Organization: Implemented automatic subfolder creation based on MetagameId (e.g., /Assets/Event/MetagameId/) to keep multiple comics perfectly separated.
+   * Professional Selection Engine: Completely redesigned the link selection dialog using high-density 'Studio Cards'. Includes vertical visual accents, technical hierarchy (Title | MetagameId), and an auto-resizable horizontal layout.
+   * Compact Context Links: Redesigned event links into a single-line format "- Title | MetagameId (URL)" to maximize space for the system log.
+   * Banner Sanitization: Removed technical ID overlays from the hero banner to emphasize the event's high-quality artwork.
+   * Precise Sidebar Alignment: Adjusted event item indentation to 28px for perfect vertical alignment with section headers.
+   * Optimized Metadata Panel: Simplified the technical info panel by removing redundant Base URLs, focusing on Navigation IDs and Event Types.
+
+# BUG FIXES
+   * Fixed a critical read-only property binding exception that caused the application to crash when selecting events.
+   * Resolved XAML parsing errors in the selection dialog related to unsupported property types.
+   * Improved interactive log synchronization, ensuring the "Open Folder" link points directly to the specific comic subfolder.
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+RiftManager | v1.1.0.0
+
+# MAJOR RELEASE: UI REDESIGN & TFT INTEGRATION
+This major release introduces a complete visual overhaul inspired by modern HUD architecture and expands event tracking capabilities to include TFT.
+
+# NEW FEATURES
+   * TFT Events Tracking: Integrated Riot's Client Config API to automatically discover and scrape TFT events (e.g., Set17AGE).
+   * HUD Visual Overhaul: Reimplemented the entire interface using a professional "Sidebar + Content" layout for better navigation.
+   * Smart Versioning: Implemented a centralized identity system (ApplicationInfos) that pulls the app version automatically from project metadata.
+
+# IMPROVEMENTS
+   * Technical Metadata: The event details panel now displays Technical Types and Navigation IDs.
+   * Redesigned Hero Banner: Event cards now feature perfectly clipped images with rounded corners (12px) and high-contrast titles.
+   * UI Stability: Migrated to a standard window style to ensure native OS behavior and improved application stability.
+   * Asset Scraping: Improved URL resolution for embed events, including better handling of locale placeholders.
+
+# BUG FIXES
+   * Fixed critical XAML build errors related to invalid properties (LetterSpacing, Padding on Panels).
+   * Fixed runtime BAML exceptions by standardizing resource paths (Pack URIs) and resource initialization order.
+   * Fixed an issue where images would overflow the rounded corners of the event details panel.
+   * Corrected a URL formatting bug that caused double slashes in regional event paths.
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+RiftManager | v1.0.0.4
+
+# HOTFIX RELEASE
+This hotfix addresses critical compatibility issues with the new Riot Games asset CDNs and improves the efficiency of event processing.
+
+# IMPROVEMENTS
+   * Improved catalog discovery: The system now dynamically builds paths using the comic number (e.g., comics-pipeline-4) and deploy hashes, ensuring full compatibility with new Riot folder structures.
+   * Universal Audio Search: Implemented a deep search logic that finds audio clips anywhere in the JSON files, regardless of structure changes.
+   * Intelligent Audio Routing: Voice lines, sound effects, and music are now automatically classified and downloaded to their correct Riot CDN folders (AudioLocales or SoundFX) based on clip suffixes.
+   * Efficient Lazy Loading: Catalog scraping is now deferred until a specific comic is selected, improving initial load times and avoiding unnecessary network requests.
+   * Enhanced Bundle Filtering: The system now uses the full event context (titles and navigation IDs) to ensure shared thematic bundles (like regional assets) are correctly identified and downloaded.
+
+# BUG FIXES
+   * Fixed a critical 404 error when attempting to fetch catalogs from outdated static paths like "/Comic/".
+   * Fixed a bug where the system would reuse the catalog from the first comic found instead of the one specifically selected by the user.
+   * Fixed an issue where the asset converter (BinToJson.exe) was failing due to incorrect command arguments and case-sensitive resource paths.
+   * Fixed a filtering bug that caused shared thematic bundles to be skipped during specific comic extractions.
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+RiftManager | v1.0.0.3
+
+# HOTFIX RELEASE
+This hotfix focuses on improving some areas of the app and fixing some critical bugs.
+
+# IMPROVEMENTS
+   * Improved asset URL extraction in DetailPageParser to recursively find all URLs within event detail JSON.
+   * Refined asset downloading to only target image files (.png, .jpg, .svg), preventing attempts to download non-asset web pages.
+
+# BUG FIXES
+   * Fixed a bug where an event that didn't have a details page wouldn't be added to the event list.
+   * Fixed a bug where downloading the Worlds event would crash if an asset like "lolesports.com" was found.
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+RiftManager | v1.0.0.2
+
+# HOTFIX RELEASE
+Small hotfix release where I add the manifest URL to get the new assets for Riot's new game.
+
+# NEW
+   * Added new manifest for get the new assets from the new game of RiotGames "2xxko"
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+RiftManager | v1.0.0.1
+
+# HOTFIX RELEASE
+Small hotfix where we released the interactive log along with some other important fixes.
+
+# NEW
+   * Added LogInteractive when finished the events and manifest downloads.
+   * An anti-spam system has been added for downloading riot asset manifests.
+   * Added new manifest assets for the new game of Riot "2xxko"
+
+# CHANGED
+   * The missing localization has been changed from Spanish to the general language.
+
+# BUG FIXES
+   * Fixed a visual error in the "List of Events" table
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+RiftManager | v1.0.0.0
+
+# INITIAL RELEASE
+I hope you like this tool and find it useful! Enjoy!
+
+# Notes
+   * There are still things in the code that need to be translated into the standard language (English) I hope it's not a problem.

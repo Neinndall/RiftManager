@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Newtonsoft.Json.Linq;
 using RiftManager.Models;
@@ -45,9 +46,11 @@ namespace RiftManager.Interfaces
                     if (property.Name == "url" && property.Value.Type == JTokenType.String)
                     {
                         string url = property.Value.ToString();
-                        if (url.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ||
-                            url.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
-                            url.EndsWith(".svg", StringComparison.OrdinalIgnoreCase))
+                        string extension = Uri.TryCreate(url, UriKind.Absolute, out Uri uri) ? Path.GetExtension(uri.LocalPath) : null;
+                        if (extension != null && (
+                            extension.Equals(".png", StringComparison.OrdinalIgnoreCase) ||
+                            extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase) ||
+                            extension.Equals(".svg", StringComparison.OrdinalIgnoreCase)))
                         {
                             urls.Add(url);
                         }
