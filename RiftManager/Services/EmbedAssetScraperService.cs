@@ -7,7 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using RiftManager.Utils;
-using RiftManager.Interfaces;
+using RiftManager.Views.Interfaces;
 
 namespace RiftManager.Services
 {
@@ -18,10 +18,7 @@ namespace RiftManager.Services
         private readonly LogService _logService;
         private readonly WebScraper _webScraper;
 
-        // Almacenar assets ya descargados para evitar repeticion, ahora como campo de instancia
-        private readonly HashSet<string> _downloadedAssets = new HashSet<string>();
-
-        // Known main files for frontpages.
+        // Known main files for frontpages (kept for compat; no longer throws).
         public static readonly List<string> KnownMainFiles = new List<string> { "app", "app.css" };
 
         // Known patterns for main files (using regex).
@@ -31,15 +28,36 @@ namespace RiftManager.Services
             @"^[a-f0-9]{8,}\.css$"    // Para archivos .css como 44939c99c1f6ea56.css
         };
 
+        // v1.2.0: strict allow-list for JS-derived relative assets. Anything that
+        // does not look like a webpack-emitted file (n.p+"images/..."/" lib-embed/..."
+        // or name.hash.ext) is JS code noise, not a downloadable file.
+        private static readonly Regex WebpackPublicPathRegex =
+            new Regex("n\\.p\\s*\\+\\s*[\"'](?<p>[^\"']+\\.(?:png|jpe?g|gif|webm|webp|svg|ogg|mp3|mp4|json|woff2?))[^\"']*[\"']",
+                RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex AbsoluteAssetcdnRegex =
+            new Regex("https://assetcdn\\.rgpub\\.io/[^\\s\"'`)\\]]+?\\.(?:png|jpe?g|gif|webm|webp|svg|ogg|mp3|mp4|json|woff2?)(?:\\?[^\\s\"'`)\\]]*)?",
+                RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex GenericAssetRegex =
+            new Regex("\\.?(?<path>[\\w.\\/-]*\\.(?:jpg|jpeg|png|gif|webm|svg|webp|ogg|mp3|mp4|json|woff2?))",
+                RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.Compiled);
+
+        // Basenames that are JS artifacts, never files (log 10:37:18-10:37:48 404s).
+        private static readonly HashSet<string> JsNoiseBasenames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "this", "e", "t", "n", "r", "window", "image", "self", "global"
+        };
+
         public EmbedAssetScraperService(HttpClient httpClient, AssetDownloader assetDownloader, LogService logService, WebScraper webScraper)
         {
             _httpClient = httpClient;
             _assetDownloader = assetDownloader;
-            _logService = logService; 
+            _logService = logService;
             _webScraper = webScraper;
         }
 
-        // Check for known main files
+        // Check for known main files (kept; now advisory only).
         private bool IsMainFile(string fileName)
         {
             return KnownMainFiles.Any(file =>
@@ -99,46 +117,50 @@ namespace RiftManager.Services
             }
         }
 
-        private async Task DownloadJsAssets(string content, string distURL, string tmpDir)
+        private async Task DownloadJsAssets(string content, string distURL, string tmpDir, HashSet<string> downloadedAssets)
         {
             _logService.Log($"Starting asset discovery and download from JS file (distURL: {distURL}).");
 
-            // Expresión regular para encontrar CUALQUIER recurso con las extensiones deseadas dentro del JS.
-            var pathRegex = new Regex(@"\.?(?<path>[\w\.\/-]*\.(?:jpg|png|gif|webm|svg|webp|ogg|json))", RegexOptions.IgnoreCase | RegexOptions.Multiline);
+            var candidates = new List<string>();
 
-            // Encontrar todas las posibles rutas de assets dentro del contenido del JS.
-            var potentialFiles = pathRegex.Matches(content)
-                .Cast<Match>()
-                .Select(m => m.Groups["path"].Value)
-                .Select(p => p.Replace("/vendor", "/commons")) // Tu lógica de reemplazo
-                .ToList();
-                                 
+            // Phase A: webpack public-path emissions (n.p+"images/x.HASH.jpg") - always real.
+            foreach (Match m in WebpackPublicPathRegex.Matches(content))
+                candidates.Add(m.Groups["p"].Value);
+
+            // Phase B: absolute assetcdn URLs embedded in JS.
+            foreach (Match m in AbsoluteAssetcdnRegex.Matches(content))
+                candidates.Add(m.Value);
+
+            // Phase C: generic relative paths, strictly filtered (see IsDownloadableJsPath).
+            foreach (Match m in GenericAssetRegex.Matches(content))
+            {
+                string p = m.Groups["path"].Value;
+                if (IsDownloadableJsPath(p, content, m))
+                    candidates.Add(p);
+            }
+
             // Eliminar duplicados para evitar descargas redundantes.
-            var uniqueAssetPaths = potentialFiles.Distinct().ToList();
+            var uniqueAssetPaths = candidates.Distinct().ToList();
 
             _logService.Log($"Found {uniqueAssetPaths.Count} unique potential asset paths in the JS file.");
-            
+
             // Buscar cuantos .svgs se encuentran
             var foundSvgs = await Finder.FindSvgs(tmpDir, content, _logService);
 
             // Derivar la URL base para la descarga de estos assets.
-            // Será la parte de la distURL sin el nombre del archivo (ej., app.XXXX.js)
             string downloadBaseUrl = (Path.GetDirectoryName(distURL) ?? string.Empty)
                                          .Replace("\\", "/") // Normalizar barras
                                          .Replace("https:/", "https://"); // Asegurarse de tener el doble slash
-            
+
             // Ruta del archivo para registrar los assets descargados (ej. files.txt).
             string filesPath = Path.Combine(tmpDir, "files.txt");
 
             // Descargar cada asset encontrado.
             foreach (var assetRelativePath in uniqueAssetPaths)
             {
-                // THIS is the correct place for the 'if' statement
                 if (assetRelativePath.Contains("/fe/"))
-                {
-                    continue; // This 'continue' now has a loop to operate on
-                }
-                
+                    continue;
+
                 // NEW: Ignore absolute URLs or external domains like lolesports
                 if (assetRelativePath.StartsWith("//") || assetRelativePath.Contains("lolesports.com"))
                 {
@@ -146,29 +168,35 @@ namespace RiftManager.Services
                     continue;
                 }
 
-                // Construir la URL completa para la descarga.
-                string fullAssetUrl = $"{downloadBaseUrl}/{assetRelativePath.TrimStart('/')}";
-                
+                string fullAssetUrl;
+                if (assetRelativePath.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                {
+                    fullAssetUrl = assetRelativePath;
+                }
+                else
+                {
+                    // Construir la URL completa para la descarga.
+                    fullAssetUrl = $"{downloadBaseUrl}/{assetRelativePath.TrimStart('/')}";
+                }
+
                 // Normalizar el nombre para el registro de assets descargados.
                 var normalizedName = ObjectHelper.NormalizeAssetName(fullAssetUrl);
-                
+
                 // Verificar si el asset ya fue descargado en esta sesión.
-                if (_downloadedAssets.Contains(normalizedName))
+                if (downloadedAssets.Contains(normalizedName))
                 {
                     _logService.LogWarning($"Skipping download of {Path.GetFileName(assetRelativePath)}, already downloaded (normalized: {normalizedName}).");
                     continue;
                 }
-                
-                _downloadedAssets.Add(normalizedName); // Marcar como descargado
+
+                downloadedAssets.Add(normalizedName); // Marcar como descargado
 
                 // Determinar el directorio de exportación manteniendo la estructura de directorios relativa.
                 string assetFileName = Path.GetFileName(assetRelativePath);
                 string rawAssetFileDirectory = Path.GetDirectoryName(assetRelativePath);
                 string assetFileDirectory = rawAssetFileDirectory == null ? "" : rawAssetFileDirectory.Replace("\\", "/");
                 assetFileDirectory = assetFileDirectory.Replace("_/lib-embed/", "lib-embed/");
-                
-                // El directorio final de exportación ahora incluye la ruta relativa completa del asset.
-                // No se reemplaza "_/lib-embed/" aquí, ya que queremos que la estructura local lo mantenga.
+
                 string finalExportDir = Path.Combine(tmpDir, assetFileDirectory).Replace("\\", "/");
 
                 // Crear las carpetas necesarias.
@@ -181,25 +209,69 @@ namespace RiftManager.Services
                     // Registrar el archivo descargado en "files.txt".
                     await File.AppendAllTextAsync(filesPath, Path.Combine(assetFileDirectory, assetFileName) + Environment.NewLine);
                 }
-                catch (Exception ex) // Capturamos cualquier excepción, ya no hay lógica de reintento alternativa aquí.
+                catch (Exception ex)
                 {
                     _logService.LogError($"Failed to download asset {assetFileName} from {fullAssetUrl}: {ex.Message}");
                 }
             }
-            
+
             // Saves the found SVGs.
             await SaveSvgs(foundSvgs, tmpDir);
         }
-                
-        private async Task DownloadCssAssets(string content, string distURL, string tmpDir)
-        {
-            var urlRegex = new Regex(@"url\((['""]?)(?<url>https?:\/\/[^'""\)]+\.(?:jpg|png|gif|webm|svg|webp|ogg|json))\1\)", RegexOptions.IgnoreCase);
 
-            var assetUrls = urlRegex.Matches(content)
-                .Cast<Match>()
-                .Select(m => m.Groups["url"].Value)
+        /// <summary>
+        /// Strict gate for generic JS regex hits. Why: the loose pattern also matches
+        /// JS code fragments ("this.svg", "e.svg", "window.webp", ".svg", ".json",
+        /// "image.jpg", "./button-x.svg" module-map keys) which produced every 404 in
+        /// the HoL log. Webpack module keys ("./x.svg":1234) are inline SVGs already
+        /// handled by Finder.FindSvgs, never HTTP files.
+        /// </summary>
+        private static bool IsDownloadableJsPath(string path, string fullContent, Match match)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return false;
+            if (path.StartsWith("//") || path.Contains("lolesports.com") || path.Contains("youtube.com"))
+                return false;
+            if (path.Contains("/fe/")) return false;
+            if (path.StartsWith("data:", StringComparison.OrdinalIgnoreCase)
+                || path.StartsWith("blob:", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            string fileName = path.Split('/').Last();
+            string baseName = fileName.Contains('.') ? fileName.Substring(0, fileName.LastIndexOf('.')) : fileName;
+            if (string.IsNullOrEmpty(baseName) || baseName.Length < 4) return false; // ".svg"/".json"
+            if (JsNoiseBasenames.Contains(baseName)) return false; // this/e/window/image
+
+            // Webpack inline-SVG module map: "./icon-x.svg":1234 -> skip (inline, not HTTP).
+            if (path.StartsWith("./") && path.EndsWith(".svg", StringComparison.OrdinalIgnoreCase))
+                return false;
+
+            // Leading-slash router paths without asset folder or hash ("/bg-x.jpg") are
+            // Vue routes, not files; real files live under images/ or carry a hash.
+            bool hasAssetFolder = path.Contains("images/", StringComparison.OrdinalIgnoreCase)
+                || path.Contains("lib-embed", StringComparison.OrdinalIgnoreCase)
+                || path.Contains("assets/", StringComparison.OrdinalIgnoreCase);
+            bool hasHash = Regex.IsMatch(fileName, @"\.[0-9a-fA-F]{5,16}\.[a-zA-Z0-9]+$");
+            bool hasSubdir = path.Contains('/');
+            if (!hasAssetFolder && !hasHash && !hasSubdir) return false;
+
+            return true;
+        }
+
+        private async Task DownloadCssAssets(string content, string distURL, string tmpDir, HashSet<string> downloadedAssets)
+        {
+            // v1.2.0: match absolute AND relative url(...) refs; skip data:/blob:.
+            var urlRegex = new Regex("url\\((['\"]?)(?<url>(?!data:|blob:)[^'\"\\)]+?\\.((?:jpg|jpeg|png|gif|webm|svg|webp|ogg|mp3|mp4|json|woff2?))(?:\\?[^'\"\\)]*)?)\\1\\)", RegexOptions.IgnoreCase);
+            var matches = urlRegex.Matches(content).Cast<Match>()
+                .Select(m => m.Groups["url"].Value.Trim())
+                .Where(u => !string.IsNullOrWhiteSpace(u))
                 .Distinct()
                 .ToList();
+
+            // Resolve relative refs against the CSS file directory.
+            string cssDir = (Path.GetDirectoryName(distURL) ?? string.Empty).Replace("\\", "/").Replace("https:/", "https://");
+            var assetUrls = matches.Select(u =>
+                u.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? u : $"{cssDir}/{u.TrimStart('/')}"
+            ).Distinct().ToList();
 
             _logService.Log($"Found {assetUrls.Count} asset URLs in CSS.");
 
@@ -207,15 +279,14 @@ namespace RiftManager.Services
 
             foreach (var assetUrl in assetUrls)
             {
-                // Ahora ObjectHelper está en RiftManager.Utils
                 var normalizedName = ObjectHelper.NormalizeAssetName(assetUrl);
-                if (_downloadedAssets.Contains(normalizedName))
+                if (downloadedAssets.Contains(normalizedName))
                 {
                     _logService.Log($"Skipping download of {normalizedName}, already downloaded.");
                     continue;
                 }
-                
-                _downloadedAssets.Add(normalizedName);
+
+                downloadedAssets.Add(normalizedName);
 
                 // --- Lógica para preservar la estructura de directorios ---
                 string rawBasePath = Path.GetDirectoryName(distURL);
@@ -228,8 +299,8 @@ namespace RiftManager.Services
 
                 string relativePath = assetUrl
                     .Replace(basePath ?? string.Empty, string.Empty)
-                    .Replace("_/lib-embed/", "lib-embed/") // Mantengo estas líneas según tu código original
-                    .Replace("_next/static/", ""); // Mantengo estas líneas según tu código original
+                    .Replace("_/lib-embed/", "lib-embed/")
+                    .Replace("_next/static/", "");
 
                 string tempDirName = Path.GetDirectoryName(relativePath);
                 string fileDirectory;
@@ -246,7 +317,7 @@ namespace RiftManager.Services
 
                 Directory.CreateDirectory(exportDir);
 
-                string fileName = Path.GetFileName(assetUrl) ?? string.Empty;
+                string fileName = Path.GetFileName(new Uri(assetUrl.Split('?')[0]).AbsolutePath) ?? string.Empty;
 
                 try
                 {
@@ -262,70 +333,100 @@ namespace RiftManager.Services
 
         /// <summary>
         /// Main function to handle scraping of embed event URLs (rgpub.io).
+        /// v1.2.0: processes root app.* dists only (same scope as v1.1.x).
+        /// Per-event dedup set replaces the old instance field (which leaked
+        /// across events on error).
         /// </summary>
         /// <param name="embedUrl">The embed URL (e.g., https://embed.rgpub.io/wwpub-hall-of-legends-embed-2025/en-us/).</param>
         /// <param name="tmpDir">The temporary directory to save assets.</param>
         public async Task HandleEmbedEventAsync(string embedUrl, string tmpDir)
-        {                   
-            // Primero, descargamos el HTML de la URL principal
-            string htmlContent;
+        {
+            var downloadedAssets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             try
             {
-                htmlContent = await _webScraper.GetContentFromUrl(embedUrl);
-            }
-            catch (Exception ex)
-            {
-                _logService.LogError($"EmbedAssetScraperService: Failed to download HTML content from {embedUrl}: {ex.Message}");
-                return;
-            }
+                string normalizedEmbedUrl = UrlNormalizer.NormalizeEmbedUrl(embedUrl);
 
-            // Expresión regular para encontrar CUALQUIERA de los archivos JavaScript o CSS principales (distURL)
-            var distUrlRegex = new Regex(@"https://assetcdn\.rgpub\.io/public/live/bundle-offload/[^/]+/[^/]+/app\.[a-f0-9]+\.(?:js|css)", RegexOptions.IgnoreCase);
-
-            // Usamos Matches para obtener todas las coincidencias
-            var distMatches = distUrlRegex.Matches(htmlContent);
-
-            if (distMatches.Count == 0)
-            {
-                _logService.LogError($"Could not find any main JS/CSS dist files in {embedUrl}.");
-                return; // Si no hay matches, salimos del método.
-            }
-
-            // Creamos un HashSet para almacenar solo URLs únicas de los archivos dist (app.xxxx.js/css).
-            HashSet<string> uniqueDistUrls = new HashSet<string>(distMatches.Cast<Match>().Select(m => m.Value));
-
-            _logService.Log($"Found {uniqueDistUrls.Count} unique main dist files in {embedUrl}.");
-
-            // Ahora iteramos sobre las URLs únicas de los archivos dist
-            foreach (string distURL in uniqueDistUrls)
-            {
-                _logService.Log($"Processing main dist file: {distURL}");
-                string fileName = (Path.GetFileName(distURL) ?? string.Empty).Split('?')[0];
-
-                _logService.Log($"Validating main file: {fileName}");
-                if (!IsMainFile(fileName))
+                // Primero, descargamos el HTML de la URL principal
+                string htmlContent;
+                try
                 {
-                    throw new Exception($"File '{fileName}' is not a valid dist file.");
+                    htmlContent = await _webScraper.GetContentFromUrl(normalizedEmbedUrl);
                 }
-                Directory.CreateDirectory(tmpDir); // Asegurarse de que el directorio temporal exista
-
-                // Descargar el archivo principal (JS o CSS)
-                await _assetDownloader.DownloadDistFile(distURL, tmpDir); // Usando tu AssetDownloader
-
-                // Contenido del archivo principal descargado (este 'content' es local al bucle).
-                string content = await File.ReadAllTextAsync(Path.Combine(tmpDir, fileName), Encoding.UTF8);
-
-                // Determinar si es un archivo CSS o JS y llamar a la lógica correspondiente
-                if (fileName.EndsWith(".css", StringComparison.OrdinalIgnoreCase))
+                catch (Exception ex)
                 {
-                    await DownloadCssAssets(content, distURL, tmpDir);
+                    _logService.LogError($"EmbedAssetScraperService: Failed to download HTML content from {normalizedEmbedUrl}: {ex.Message}");
+                    return;
                 }
-                else if (fileName.EndsWith(".js", StringComparison.OrdinalIgnoreCase))
+
+                // Root app.* dists only (same scope as v1.1.x; vendors/commons/runtime
+                // verified asset-free on HoL 2026).
+                HashSet<string> uniqueDistUrls = DiscoverDistUrls(htmlContent);
+
+                if (uniqueDistUrls.Count == 0)
                 {
-                    await DownloadJsAssets(content, distURL, tmpDir);
+                    _logService.LogError($"Could not find any main JS/CSS dist files in {normalizedEmbedUrl}.");
+                    return;
+                }
+
+                _logService.Log($"Found {uniqueDistUrls.Count} unique main dist files in {normalizedEmbedUrl}.");
+
+                // Ahora iteramos sobre las URLs únicas de los archivos dist
+                foreach (string distURL in uniqueDistUrls)
+                {
+                    _logService.Log($"Processing main dist file: {distURL}");
+                    string fileName = (Path.GetFileName(new Uri(distURL).AbsolutePath) ?? string.Empty).Split('?')[0];
+
+                    _logService.Log($"Validating main file: {fileName}");
+                    if (!IsMainFile(fileName) && !fileName.EndsWith(".js", StringComparison.OrdinalIgnoreCase) && !fileName.EndsWith(".css", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // v1.2.0: warn-and-skip instead of throwing (old throw aborted the whole event).
+                        _logService.LogWarning($"Skipping non-dist file '{fileName}'.");
+                        continue;
+                    }
+                    Directory.CreateDirectory(tmpDir); // Asegurarse de que el directorio temporal exista
+
+                    // Descargar el archivo principal (JS o CSS)
+                    await _assetDownloader.DownloadDistFile(distURL, tmpDir);
+
+                    // Contenido del archivo principal descargado (este 'content' es local al bucle).
+                    string content = await File.ReadAllTextAsync(Path.Combine(tmpDir, fileName), Encoding.UTF8);
+
+                    // Determinar si es un archivo CSS o JS y llamar a la lógica correspondiente
+                    if (fileName.EndsWith(".css", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await DownloadCssAssets(content, distURL, tmpDir, downloadedAssets);
+                    }
+                    else if (fileName.EndsWith(".js", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await DownloadJsAssets(content, distURL, tmpDir, downloadedAssets);
+                    }
                 }
             }
-            _downloadedAssets.Clear(); // Limpiar el hashset para la próxima ejecución si la instancia se reutiliza.
+            finally
+            {
+                downloadedAssets.Clear();
+            }
+        }
+
+        private HashSet<string> DiscoverDistUrls(string html)
+        {
+            // v1.2.0 (corrected): ONLY root app.* dists. Why not preload-everything:
+            // verified against HoL 2026 HTML+files - vendors/app.* (1.7 MB), commons/
+            // and runtime contain ZERO downloadable game assets (no n.p emissions,
+            // no assetcdn file refs, vendor.css has 0 url()). Worse, vendor.js holds
+            // hundreds of /lol-game-data/... and /fe/... client-data strings that
+            // must never resolve against the CDN (404 storm). Game assets live in
+            // root app.HASH.js (webpack modules) and app.HASH.css (images-direct/).
+            var found = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            if (!string.IsNullOrEmpty(html))
+            {
+                var distUrlRegex = new Regex(@"https://assetcdn\.rgpub\.io/public/live/bundle-offload/[^/]+/[^/]+/app\.[a-f0-9]+\.(?:js|css)", RegexOptions.IgnoreCase);
+                foreach (Match m in distUrlRegex.Matches(html))
+                    found.Add(m.Value);
+            }
+
+            return found;
         }
     }
 }

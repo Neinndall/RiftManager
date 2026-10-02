@@ -48,9 +48,11 @@ namespace RiftManager.Utils
             // Asegurarse de no eliminar sufijos descriptivos como -immortalized o -pass.
             // La expresión busca un punto seguido de 6 a 16 caracteres hexadecimales (hash común)
             // justo antes de la extensión.
+            // v1.2.0: ToLowerInvariant para que la dedup sea case-insensitive
+            // (CDN mezcla .JPG/.jpg y el HashSet ya es OrdinalIgnoreCase).
             var normalizedName = Regex.Replace(fileName ?? string.Empty, @"\.[0-9a-fA-F]{6,16}(\.[a-zA-Z]+)$", "$1");
 
-            return normalizedName;
+            return normalizedName.ToLowerInvariant();
         }
     }
 }

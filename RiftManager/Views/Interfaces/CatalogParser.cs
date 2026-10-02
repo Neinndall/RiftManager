@@ -6,7 +6,7 @@ using Newtonsoft.Json.Linq; // Cambiado desde System.Text.Json
 using System.Text.RegularExpressions;
 using RiftManager.Services; // Para LogService
 
-namespace RiftManager.Interfaces
+namespace RiftManager.Views.Interfaces
 {
     public class CatalogParser
     {
@@ -69,8 +69,12 @@ namespace RiftManager.Interfaces
                     {
                         string fileName = Path.GetFileName(pathForChecks).ToLower();
 
-                        // Lógica de filtrado mejorada para bundles de cómics
-                        if (fileName.StartsWith("comics_assets_mc_", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrEmpty(metagameId))
+                        // v1.2.0: generalized keyword filter. Why: old code only filtered
+                        // files starting with "comics_assets_mc_", so play/minigame and
+                        // future prefixes bypassed filtering entirely (all-or-nothing).
+                        // Now any Unity bundle family is filtered by event keywords when
+                        // keywords exist; empty keywords still accept everything.
+                        if (!string.IsNullOrEmpty(metagameId) && IsFilterableBundle(fileName))
                         {
                             var contextKeywords = metagameId.ToLower().Split(new[] { '_' }, StringSplitOptions.RemoveEmptyEntries).Where(k => k.Length > 2).ToList();
 
@@ -101,6 +105,19 @@ namespace RiftManager.Interfaces
             }
 
             return bundleUrls;
+        }
+
+        /// <summary>
+        /// Bundle families subject to keyword filtering (comics + play/minigame Unity).
+        /// Shared thematic bundles that carry none of the keywords are still skipped
+        /// by design; EventProcessor feeds ALL event links/titles so region bundles match.
+        /// </summary>
+        private static bool IsFilterableBundle(string fileNameLower)
+        {
+            return fileNameLower.StartsWith("comics_assets_", StringComparison.Ordinal)
+                || fileNameLower.StartsWith("play_", StringComparison.Ordinal)
+                || fileNameLower.StartsWith("minigame_", StringComparison.Ordinal)
+                || fileNameLower.StartsWith("comics_", StringComparison.Ordinal);
         }
     }
 }

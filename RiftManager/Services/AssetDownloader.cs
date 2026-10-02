@@ -22,93 +22,13 @@ namespace RiftManager.Services
         // --- Method to Download Bundles ---
         public async Task DownloadBundle(string bundleUrl, string destinationFolder)
         {
-            string fileName = Path.GetFileName(new Uri(bundleUrl).AbsolutePath);
-            string fullDestinationPath = Path.Combine(destinationFolder, fileName);
-
-            string directory = Path.GetDirectoryName(fullDestinationPath);
-            _directoriesCreator.EnsureDirectoryExists(directory);
-            
-            if (File.Exists(fullDestinationPath))
-            {
-                _logService.LogWarning($"File {fileName} already exists, skipping download.");
-                return;
-            }
-
-            _logService.Log($"Downloading bundle: {fileName}");
-            try
-            {
-                HttpResponseMessage response = await _httpClient.GetAsync(bundleUrl, HttpCompletionOption.ResponseHeadersRead);
-                response.EnsureSuccessStatusCode(); 
-
-                using (Stream contentStream = await response.Content.ReadAsStreamAsync())
-                using (FileStream fileStream = new FileStream(fullDestinationPath, FileMode.Create, FileAccess.Write, FileShare.None))
-                {
-                    await contentStream.CopyToAsync(fileStream);
-                }
-            }
-            catch (HttpRequestException httpEx)
-            {
-                if (httpEx.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    _logService.LogWarning($"{fileName} not found at {bundleUrl}");
-                }
-                else
-                {
-                    _logService.LogError($"✗ HTTP Error for {fileName} ({(int?)httpEx.StatusCode}): {httpEx.Message}");
-                }
-                throw; 
-            }
-            catch (Exception ex)
-            {
-                _logService.LogError($"✗ Unexpected error for {fileName}: {ex.GetType().Name}");
-                throw; 
-            }
+            await DownloadFileCoreAsync(bundleUrl, destinationFolder, "bundle");
         }
  
         // --- Method to Download Normal Event Assets ---
         public async Task DownloadAsset(string assetUrl, string destinationFolder)
         {
-            string fileName = Path.GetFileName(new Uri(assetUrl).AbsolutePath);
-            string fullDestinationPath = Path.Combine(destinationFolder, fileName);
-
-            string directory = Path.GetDirectoryName(fullDestinationPath);
-            _directoriesCreator.EnsureDirectoryExists(directory);
-            
-            if (File.Exists(fullDestinationPath))
-            {
-                _logService.LogWarning($"File {fileName} already exists, skipping download.");
-                return;
-            }
-
-            _logService.Log($"Downloading asset: {fileName}");
-            try
-            {
-                HttpResponseMessage response = await _httpClient.GetAsync(assetUrl, HttpCompletionOption.ResponseHeadersRead);
-                response.EnsureSuccessStatusCode(); 
-
-                using (Stream contentStream = await response.Content.ReadAsStreamAsync())
-                using (FileStream fileStream = new FileStream(fullDestinationPath, FileMode.Create, FileAccess.Write, FileShare.None))
-                {
-                    await contentStream.CopyToAsync(fileStream);
-                }
-            }
-            catch (HttpRequestException httpEx)
-            {
-                if (httpEx.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    _logService.LogWarning($"{fileName} not found at {assetUrl}");
-                }
-                else
-                {
-                    _logService.LogError($"✗ HTTP Error for {fileName} ({(int?)httpEx.StatusCode}): {httpEx.Message}");
-                }
-                throw; 
-            }
-            catch (Exception ex)
-            {
-                _logService.LogError($"✗ Unexpected error for {fileName}: {ex.GetType().Name}");
-                throw; 
-            }
+            await DownloadFileCoreAsync(assetUrl, destinationFolder, "asset");
         }
 
         /// <summary>
@@ -118,23 +38,40 @@ namespace RiftManager.Services
         /// <param name="destinationFolder">The folder where the file will be saved.</param>
         public async Task DownloadDistFile(string distUrl, string destinationFolder)
         {
-            string fileName = Path.GetFileName(new Uri(distUrl).AbsolutePath);
+            await DownloadFileCoreAsync(distUrl, destinationFolder, "dist");
+        }
+
+
+        /// <summary>
+        /// v1.2.0: single download core. Why: DownloadBundle/DownloadAsset/
+        /// DownloadDistFile were 3 copies of the same 40-line block; fixes had to
+        /// be applied 3 times. Behavior preserved (same logs/behavior per label,
+        /// same throw-on-error contract relied upon by EventProcessor).
+        /// </summary>
+        private async Task DownloadFileCoreAsync(string fileUrl, string destinationFolder, string label)
+        {
+            string fileName = Path.GetFileName(new Uri(fileUrl).AbsolutePath);
+            // Sanitize against invalid Windows filename chars from odd URLs.
+            foreach (char c in Path.GetInvalidFileNameChars())
+                fileName = fileName.Replace(c, '_');
             string fullDestinationPath = Path.Combine(destinationFolder, fileName);
 
             string directory = Path.GetDirectoryName(fullDestinationPath);
             _directoriesCreator.EnsureDirectoryExists(directory);
-            
+
             if (File.Exists(fullDestinationPath))
             {
-                _logService.LogWarning($"DIST file '{fileName}' already exists, skipping download.");
+                _logService.LogWarning($"File {fileName} already exists, skipping download.");
                 return;
             }
 
-            _logService.Log($"Downloading dist: {fileName}");
+            _logService.Log(label == "dist" ? $"Downloading dist: {fileName}"
+                : label == "bundle" ? $"Downloading bundle: {fileName}"
+                : $"Downloading asset: {fileName}");
             try
             {
-                HttpResponseMessage response = await _httpClient.GetAsync(distUrl, HttpCompletionOption.ResponseHeadersRead);
-                response.EnsureSuccessStatusCode(); 
+                HttpResponseMessage response = await _httpClient.GetAsync(fileUrl, HttpCompletionOption.ResponseHeadersRead);
+                response.EnsureSuccessStatusCode();
 
                 using (Stream contentStream = await response.Content.ReadAsStreamAsync())
                 using (FileStream fileStream = new FileStream(fullDestinationPath, FileMode.Create, FileAccess.Write, FileShare.None))
@@ -146,21 +83,20 @@ namespace RiftManager.Services
             {
                 if (httpEx.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
-                    _logService.LogWarning($"DIST file '{fileName}' not found at {distUrl}");
+                    _logService.LogWarning($"{fileName} not found at {fileUrl}");
                 }
                 else
                 {
-                    _logService.LogError($"✗ HTTP Error downloading DIST '{fileName}' ({(int?)httpEx.StatusCode}): {httpEx.Message}");
+                    _logService.LogError($"✗ HTTP Error for {fileName} ({(int?)httpEx.StatusCode}): {httpEx.Message}");
                 }
-                throw; 
+                throw;
             }
             catch (Exception ex)
             {
-                _logService.LogError($"✗ Unexpected error downloading DIST '{fileName}': {ex.GetType().Name}");
-                throw; 
+                _logService.LogError($"✗ Unexpected error for {fileName}: {ex.GetType().Name}");
+                throw;
             }
         }
-
 
         /// <summary>
         /// Downloads an asset from a manifest to a destination folder.

@@ -25,8 +25,11 @@ namespace RiftManager.Utils
                 Console.WriteLine("[ERROR]: LogService is null in Finder.FindSvgs. Logging will be degraded.");
             }
 
-            // Define la expresión regular para encontrar SVGs completos
-            var svgRegex = new Regex(@"<svg\b[^>]*?(?:viewBox=""(\b[^""]*)"")?>([\s\S]*?)<\/svg>",
+            // v1.2.0: simplified SVG matcher (was viewBox-centric and missed
+            // single-quoted/no-attribute inlines). Inline SVGs from webpack module
+            // maps are the real icon/button/logo files - downloading them via HTTP
+            // always 404s, so extraction here is the only correct path.
+            var svgRegex = new Regex(@"<svg\b[^>]*>([\s\S]*?)<\/svg>",
                                 RegexOptions.IgnoreCase | RegexOptions.Multiline);
 
             // Encuentra todas las coincidencias en el contenido del archivo

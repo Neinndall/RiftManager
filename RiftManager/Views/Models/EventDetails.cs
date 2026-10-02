@@ -1,7 +1,24 @@
-﻿// RiftManager.Models/EventDetails.cs
+﻿// RiftManager.Views.Models/EventDetails.cs
 
-namespace RiftManager.Models
+namespace RiftManager.Views.Models
 {
+    /// <summary>
+    /// Event kinds handled by the app. Why: v1.1.x guessed the pipeline from
+    /// link titles ("comic"/"play"); explicit types let EventProcessor route
+    /// directly: Normal -&gt; cmsassets only, EmbedWeb -&gt; Nuxt JS/CSS scraper,
+    /// UnityCatalog -&gt; catalog.bin -&gt; bundles -&gt; extract -&gt; audio.
+    /// </summary>
+    public enum EventType
+    {
+        Unknown,
+        /// <summary>lc_home_tab without embed: only Background/Icon/AdditionalAssets.</summary>
+        Normal,
+        /// <summary>Nuxt SPA on embed.rgpub.io + assetcdn (HoL 2026): no catalog.bin.</summary>
+        EmbedWeb,
+        /// <summary>Unity WebGL (comics/play/minigame pipelines): StreamingAssets/aa/catalog.bin.</summary>
+        UnityCatalog
+    }
+
     public class EventDetails
     {
         public string Title { get; set; }
@@ -11,11 +28,33 @@ namespace RiftManager.Models
         {
             get
             {
+                // v1.2.0: explicit type wins (shown in the technical panel);
+                // legacy flags kept as fallback for Unknown.
+                if (Type != EventType.Unknown) return Type.ToString();
                 string type = "";
                 if (CatalogInformation != null) type += "Catalog ";
                 if (HasMainEmbedUrl) type += "Embed ";
                 return string.IsNullOrWhiteSpace(type) ? "N/A" : type.Trim();
             }
+        }
+
+        /// <summary>
+        /// Explicit pipeline routing. Coordinator sets Normal/EmbedWeb from links;
+        /// EventProcessor upgrades to UnityCatalog once catalog.bin is confirmed.
+        /// </summary>
+        public EventType Type { get; set; } = EventType.Unknown;
+
+        /// <summary>
+        /// Recomputes <see cref="Type"/> from current links/catalog state.
+        /// </summary>
+        public void RefreshType()
+        {
+            if (CatalogInformation != null)
+                Type = EventType.UnityCatalog;
+            else if (HasMainEmbedUrl || (MainEventLinks?.Any() == true))
+                Type = EventType.EmbedWeb;
+            else
+                Type = EventType.Normal;
         }
 
         public EventDetails(string title, string navigationItemId)

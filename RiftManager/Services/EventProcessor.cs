@@ -5,9 +5,10 @@ using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using RiftManager.Models;
+using RiftManager.Views.Models;
 using RiftManager.Services;
-using RiftManager.Interfaces;
+using RiftManager.Views.Interfaces;
+using RiftManager.Utils;
 
 namespace RiftManager.Services
 {
@@ -48,8 +49,9 @@ namespace RiftManager.Services
             // --- FORCE FRESH CATALOG FOR SELECTED LINK ---
             if (!string.IsNullOrEmpty(urlToProcess))
             {
-                // Limpiamos el locale para el scraper
-                string scrapUrl = urlToProcess.Contains("{locale}") ? urlToProcess.Replace("{locale}", "en-us") : urlToProcess;
+                // v1.2.0: single normalization point (was inline Replace here +
+                // stripping in NavigationParser -> "//" URLs).
+                string scrapUrl = UrlNormalizer.NormalizeEmbedUrl(urlToProcess);
 
                 // Si hay un link seleccionado, borramos el catálogo viejo para no heredar basura (ej: del comic1)
                 if (selectedMainEventLink != null)
@@ -66,13 +68,16 @@ namespace RiftManager.Services
                     {
                         _logService.LogSuccess($"[EventProcessor] Fresh catalog found: {newCatalogUrl}");
                         string assetBaseUrlForBundles = newCatalogUrl.Replace("catalog.bin", "");
-                        currentEvent.CatalogInformation = new Models.CatalogData
+                        currentEvent.CatalogInformation = new CatalogData
                         {
                             BaseUrl = assetBaseUrlForBundles,
                             CatalogJsonUrl = newCatalogUrl
                         };
                     }
                 }
+
+                // v1.2.0: upgrade routing once catalog.bin is confirmed (EmbedWeb -> UnityCatalog).
+                currentEvent.RefreshType();
             }
 
             // --- START DETAILED LOG FOR THE SELECTED EVENT ---
@@ -160,7 +165,14 @@ namespace RiftManager.Services
                 }
             }
             
-            var filterKeywords = string.Join("_", filterKeywordsList.Distinct());
+            // v1.2.0: keywords normalized lowercase/distinct for CatalogParser.
+            // Routing decision (no behavior change, only clarity):
+            //  catalog found -> UnityCatalog path; embed.rgpub.io w/o catalog -> EmbedWeb;
+            //  no URL at all -> Normal (background/icon/additional only).
+            var filterKeywords = string.Join("_", filterKeywordsList
+                .Where(k => !string.IsNullOrWhiteSpace(k))
+                .Select(k => k.ToLowerInvariant())
+                .Distinct());
             _logService.LogDebug($"[EventProcessor] Combined filtering keywords: {filterKeywords}");
 
             // --- DETERMINE BASE PATH FOR EXTRACCION ---

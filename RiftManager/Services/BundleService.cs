@@ -4,8 +4,8 @@ using System.IO;
 using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
-using RiftManager.Models;
-using RiftManager.Interfaces;
+using RiftManager.Views.Models;
+using RiftManager.Views.Interfaces;
 using RiftManager.Services;
 using RiftManager.Utils;
 using Newtonsoft.Json.Linq;
@@ -18,17 +18,20 @@ namespace RiftManager.Services
         private readonly JsonFetcherService _jsonFetcherService;
         private readonly CatalogParser _catalogParser;
         private readonly DirectoriesCreator _directoriesCreator;
+        private readonly HttpClient _httpClient;
 
         public BundleService(
             JsonFetcherService jsonFetcherService,
             LogService logService,
             CatalogParser catalogParser,
-            DirectoriesCreator directoriesCreator)
+            DirectoriesCreator directoriesCreator,
+            HttpClient httpClient)
         {
             _jsonFetcherService = jsonFetcherService;
             _logService = logService;
             _catalogParser = catalogParser;
             _directoriesCreator = directoriesCreator;
+            _httpClient = httpClient;
         }
         
         public async Task<List<string>> GetBundleUrlsFromCatalog(string catalogJsonUrl, string assetBaseUrl, string metagameId = null)
@@ -56,15 +59,21 @@ namespace RiftManager.Services
 
             try
             {
-                // Step 1: Download the .bin file
-                using (var httpClient = new HttpClient())
+                // Step 1: Download the .bin file (v1.2.0: shared HttpClient with UA,
+                // was `new HttpClient()` per call -> socket exhaustion + no UA).
+                // Why shared: catalog.bin lives on the same assetcdn that blocks
+                // UA-less clients; AssetDownloader/WebScraper already use it.
+                var response = await _httpClient.GetAsync(catalogJsonUrl);
+                response.EnsureSuccessStatusCode();
+                long? contentLength = response.Content.Headers.ContentLength;
+                if (contentLength.HasValue && contentLength.Value == 0)
                 {
-                    var response = await httpClient.GetAsync(catalogJsonUrl);
-                    response.EnsureSuccessStatusCode();
-                    using (var fs = new FileStream(binPath, FileMode.Create, FileAccess.Write, FileShare.None))
-                    {
-                        await response.Content.CopyToAsync(fs);
-                    }
+                    _logService.LogError("[BundleService] Catalog.bin is empty (0 bytes).");
+                    return bundleUrls;
+                }
+                using (var fs = new FileStream(binPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    await response.Content.CopyToAsync(fs);
                 }
                 _logService.LogDebug($"[BundleService] Catalog.bin downloaded to: {binPath}");
 

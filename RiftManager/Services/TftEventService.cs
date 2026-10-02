@@ -2,7 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
-using RiftManager.Models;
+using RiftManager.Views.Models;
+using RiftManager.Utils;
 
 namespace RiftManager.Services
 {
@@ -55,8 +56,8 @@ namespace RiftManager.Services
                             // Use eventId as both title and navigationItemId for these events
                             EventDetails tftEvent = new EventDetails(eventId, eventId);
 
-                            // Replace {bcplocale} with en-us as requested by user
-                            string finalUrl = url.Replace("{bcplocale}", "en-us");
+                            // v1.2.0: normalize via UrlNormalizer ({bcplocale} -> en-us, no "//").
+                            string finalUrl = UrlNormalizer.NormalizeEmbedUrl(url);
                             
                             tftEvent.MainEventUrl = finalUrl;
                             tftEvent.HasMainEmbedUrl = true;
@@ -68,6 +69,7 @@ namespace RiftManager.Services
                             });
 
                             tftEvents.Add(tftEvent);
+                            tftEvent.RefreshType();
                             _logService.LogDebug($"[TftEventService] Found TFT event: {eventId} - {finalUrl}");
                         }
                     }

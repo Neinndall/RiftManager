@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Controls;
-using RiftManager.Models;
+using RiftManager.Views.Models;
 
-namespace RiftManager.Dialogs
+namespace RiftManager.Views.Dialogs
 {
     public partial class LinkSelectionDialog : Window
     {

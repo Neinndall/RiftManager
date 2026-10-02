@@ -1,4 +1,4 @@
-﻿namespace RiftManager.Models
+﻿namespace RiftManager.Views.Models
 {
     public class CatalogData
     {

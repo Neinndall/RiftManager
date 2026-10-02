@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json.Linq;
-using RiftManager.Models;
+using RiftManager.Views.Models;
 using RiftManager.Services;
+using RiftManager.Utils;
 
-namespace RiftManager.Interfaces
+namespace RiftManager.Views.Interfaces
 {
     public class DetailPageParser
     {
@@ -37,6 +38,12 @@ namespace RiftManager.Interfaces
             return assetUrls.Distinct().ToList(); // Eliminar duplicados
         }
 
+        private static readonly HashSet<string> ImageAssetExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".png", ".jpg", ".jpeg", ".svg", ".webp", ".gif", ".bmp", ".avif",
+            ".webm", ".mp4", ".ogg", ".mp3"
+        };
+
         private void FindUrlsRecursively(JToken token, List<string> urls)
         {
             if (token is JObject obj)
@@ -46,11 +53,11 @@ namespace RiftManager.Interfaces
                     if (property.Name == "url" && property.Value.Type == JTokenType.String)
                     {
                         string url = property.Value.ToString();
+                        // Why LocalPath: Riot appends ?accountingTag=... (v1.1.0.2 fix, kept).
                         string extension = Uri.TryCreate(url, UriKind.Absolute, out Uri uri) ? Path.GetExtension(uri.LocalPath) : null;
-                        if (extension != null && (
-                            extension.Equals(".png", StringComparison.OrdinalIgnoreCase) ||
-                            extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase) ||
-                            extension.Equals(".svg", StringComparison.OrdinalIgnoreCase)))
+                        // v1.2.0: .webp/.jpeg/.gif/.webm were silently dropped (God-King
+                        // background is .webp); youtube/open_iframe never matches here.
+                        if (extension != null && ImageAssetExtensions.Contains(extension))
                         {
                             urls.Add(url);
                         }
@@ -114,6 +121,8 @@ namespace RiftManager.Interfaces
 
                                         if (currentUrl != null && currentUrl.Contains(EmbedUrlIdentifier, StringComparison.OrdinalIgnoreCase))
                                         {
+                                            // v1.2.0: normalize ({locale} -> en-us, collapse "//").
+                                            currentUrl = UrlNormalizer.NormalizeEmbedUrl(currentUrl);
                                             _logService.LogDebug($"[DetailPageParser] Main metagame URL found: {currentUrl} (MetagameId: {currentMetagameId ?? "N/A"})");
                                             foundMainEventLinks.Add(new MainEventLink(currentUrl)
                                             {

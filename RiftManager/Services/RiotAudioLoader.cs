@@ -6,7 +6,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using RiftManager.Models;
+using RiftManager.Views.Models;
 using RiftManager.Services;
 
 namespace RiftManager.Services
@@ -29,12 +29,17 @@ namespace RiftManager.Services
             _logService.Log("[RiotAudioLoader] Starting a new deep audio search in JSON assets...");
             Directory.CreateDirectory(audioSavePath);
 
-            string searchPath = Path.Combine(extractedAssetsPath, "Assets", "Prefabs", "Comics");
-
+            // v1.2.0: was hardcoded to Assets/Prefabs/Comics (TopDirectoryOnly), so
+            // play/minigame Unity builds silently skipped audio. Now: prefer Comics
+            // when present, else fall back to a recursive scan of ExtractedAssets.
+            string comicsPath = Path.Combine(extractedAssetsPath, "Assets", "Prefabs", "Comics");
+            string searchPath = comicsPath;
+            SearchOption searchOption = SearchOption.TopDirectoryOnly;
             if (!Directory.Exists(searchPath))
             {
-                _logService.LogWarning($"[RiotAudioLoader] Comic assets directory not found: {searchPath}. Audio extraction skipped.");
-                return;
+                _logService.Log($"[RiotAudioLoader] Comics dir not found, falling back to recursive scan: {extractedAssetsPath}");
+                searchPath = extractedAssetsPath;
+                searchOption = SearchOption.AllDirectories;
             }
 
             var audioUrlsToDownload = new HashSet<string>();
@@ -42,7 +47,8 @@ namespace RiftManager.Services
 
             try
             {
-                var jsonFiles = Directory.EnumerateFiles(searchPath, "*.json", SearchOption.TopDirectoryOnly);
+                // Cap file count: recursive fallback on huge extractions stays bounded.
+                var jsonFiles = Directory.EnumerateFiles(searchPath, "*.json", searchOption).Take(500);
 
                 foreach (var jsonFile in jsonFiles)
                 {
@@ -104,13 +110,15 @@ namespace RiftManager.Services
         {
             // catalogBaseUrl suele ser .../StreamingAssets/aa/
             // Necesitamos llegar a .../StreamingAssets
-            string baseUrl = catalogBaseUrl.TrimEnd('/');
-            
+            // v1.2.0: robusto ante variantes (trailing slash, /aa, /StreamingAssets/aa).
+            if (string.IsNullOrWhiteSpace(catalogBaseUrl)) return catalogBaseUrl ?? string.Empty;
+            string baseUrl = catalogBaseUrl.Trim().TrimEnd('/');
+
             if (baseUrl.EndsWith("/aa", StringComparison.OrdinalIgnoreCase))
             {
                 baseUrl = baseUrl[..^"/aa".Length];
             }
-            
+
             return baseUrl;
         }
     }

@@ -2,7 +2,8 @@ using System;
 using System.Net.Http;
 using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
-using RiftManager.Interfaces;
+using RiftManager.Views;
+using RiftManager.Views.Interfaces;
 using RiftManager.Services;
 using RiftManager.Utils;
 

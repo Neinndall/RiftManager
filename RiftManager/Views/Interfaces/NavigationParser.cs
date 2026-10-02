@@ -1,8 +1,9 @@
 ﻿using System;
 using Newtonsoft.Json.Linq;
-using RiftManager.Models;
+using RiftManager.Views.Models;
+using RiftManager.Utils;
 
-namespace RiftManager.Interfaces
+namespace RiftManager.Views.Interfaces
 {
     public class NavigationParser
     {
@@ -30,15 +31,12 @@ namespace RiftManager.Interfaces
             {
                 string url = urlToken.ToString();
 
-                // NEW: Clean the URL from {locale} placeholder
-                if (url != null && url.Contains("{locale}"))
-                {
-                    url = url.Replace("{locale}", "");
-                }
-
+                // v1.2.0: normalize via UrlNormalizer ({locale} -> en-us, collapse "//").
+                // Why: old code replaced "{locale}" with "" leaving
+                // "...embed-2026//" (see application.log 10:37:12.537).
                 if (url != null && url.Contains(EmbedUrlIdentifier, StringComparison.OrdinalIgnoreCase))
                 {
-                    return url;
+                    return UrlNormalizer.NormalizeEmbedUrl(url);
                 }
             }
             
